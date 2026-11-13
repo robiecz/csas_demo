@@ -80,3 +80,16 @@ header .tools{justify-self:end}
 }
 @media(min-width:1100px){.arena{grid-template-columns:minmax(0,1.3fr) minmax(420px,1fr);gap:40px}}
 @media(max-width:800px){aside .intro h1{font-size:clamp(24px,5vw,32px)}}
+
+/* Presenter block follows the wheel's center on desktop and sits centered below it on mobile. */
+@media(min-width:801px){
+ .arena{align-items:start}
+ .arena>aside{height:min(560px,max(160px,calc(100svh - 145px)));display:flex;align-items:center;justify-content:center}
+ .arena>aside .intro{width:100%;margin:0}
+}
+@media(max-width:800px){
+ .arena>aside{display:block;height:auto;text-align:center}
+ .arena>aside .intro{text-align:center;margin:0 auto;padding:0;width:100%}
+ .arena>aside .intro h1{white-space:normal;text-align:center}
+ .current-presenter{text-align:center;margin-left:auto;margin-right:auto}
+}
