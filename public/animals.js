@@ -36,8 +36,6 @@ function animalSvg(kind,action){
    <path class="animal-tongue" d="M95 126Q100 123 106 126L105 137Q100 142 96 137Z" fill="#e99ca9"/>
    ${cat?'<path d="M76 117l-22-4m23 11-24 3m70-10 22-4m-23 11 24 3" stroke="#d8daeb" stroke-width="1.2" stroke-linecap="round" opacity=".8"/>':''}
   </g>
-  <path d="M80 138Q100 149 124 138" fill="none" stroke="${cat?'#ae9bbf':'#64aba5'}" stroke-width="5"/>
-  <circle cx="105" cy="145" r="4" fill="#edc980"/>
  </g>
  <g class="animal-sniff" fill="none" stroke="#adbcc6" stroke-width="1.4" stroke-linecap="round"><path d="M57 168q-10-8-1-16"/><path d="M45 179q-12-9-3-19"/></g>
  <g class="animal-spark" fill="#e0c6a4"><path d="M182 58l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z"/><circle cx="196" cy="83" r="2"/></g>
