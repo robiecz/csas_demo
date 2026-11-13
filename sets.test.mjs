@@ -10,7 +10,8 @@ test('sady: izolace, vytvoření, editace názvu a jmen, URL, souběh a odstran�
  list=(await req('/api/sets')).data;const setA=a.data.set;
  assert.equal((await req('/api/sets/save',{name:'Kolize',slug:'novasada',names:'',registryRevision:list.revision})).status,409);
  const b=await req('/api/sets/save',{name:'Jiná sada',slug:'jiná',names:'Třetí Kolega',registryRevision:list.revision});assert.equal(b.status,400);
- assert.equal((await req('/api/sets/save',{name:'Druhá sada',slug:'druha',names:'Třetí Kolega',registryRevision:list.revision})).status,200);
+ assert.equal((await req('/api/sets/save',{name:'Druhá sada',slug:'druha',names:'test\ntest2\ntest3',registryRevision:list.revision})).status,200);
+ assert.deepEqual((await req('/api/state?set=druha')).data.people.map(p=>p.name),['test','test2','test3']);
  let state=(await req('/api/state?set=novasada',null,false)).data;assert.equal(state.people.length,2);assert.equal((await req('/api/state')).data.people[0].id,root.people[0].id);
  const draw=(await req('/api/spin?set=novasada',{revision:state.revision},false)).data;
  assert.equal((await req('/api/state?set=druha')).data.winners.length,0);
