@@ -20,7 +20,7 @@ export async function handler(req,res){
  if(req.method==='GET'&&path==='/api/auth')return reply(200,{ok:true});
  if(req.method!=='POST')return reply(405,{error:'Nepodporovaná metoda.'});
  if(req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`&&req.headers.origin!==`https://${req.headers.host}`)return reply(403,{error:'Neplatný původ požadavku.'});
- let body='';for await(const chunk of req){body+=chunk;if(body.length>100000)return reply(413,{error:'Příliš mnoho dat.'})}const data=JSON.parse(body||'{}');
+ let body='';for await(const chunk of req){body+=chunk;if(body.length>100000)return reply(413,{error:'Příliš mnoho dat.'})}const data=req.body&&typeof req.body==='object'?req.body:JSON.parse(typeof req.body==='string'?req.body:(body||'{}'));
  if(Date.now()<lockedUntil)return reply(409,{error:'Probíhá losování. Vyčkej na vyhlášení.'});
  if(data.revision!==state.revision)return reply(409,{error:'Seznam se změnil. Obnov stránku a zkus to znovu.'});
  let next=structuredClone(state);
