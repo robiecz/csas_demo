@@ -68,3 +68,4 @@ header .brand{justify-self:start}
 header .tools{justify-self:end}
 .header-motto{margin:0;text-align:center;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
 @media(max-width:900px){header{grid-template-columns:1fr auto;gap:8px 16px}.header-motto{grid-column:1/-1;grid-row:2;font-size:10px;padding:4px 0}.tools{grid-column:2;grid-row:1}}
+

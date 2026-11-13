@@ -41,3 +41,11 @@ Před nasazením připoj přes Vercel Marketplace samostatný Upstash Redis a na
 Pro preview používej samostatnou databázi, aby testování neměnilo ostré losování. Redis ukládá stav i zámek a atomická kontrola revize brání souběžným změnám mezi instancemi. Bez Redis se aplikace na Vercelu záměrně odmítne spustit; dočasné úložiště se pro účastníky nepoužívá. Lokální a Docker provoz nadále využívá JSON soubor.
 
 V nastavení Domains přidej demo.minka.cz a použij přesně DNS hodnoty z Vercelu. Push do produkční větve pak spustí automatické nasazení.
+
+## Sdílené živé losování
+
+Server ukládá pro každý tah `currentDraw`: identifikátor, serverový čas začátku, fáze animace, okamžik rozsvícení a vyhlášení i výsledný úhel. Prohlížeče používají stejnou funkci `sampleDraw` z `public/timeline.js` a čas korigovaný podle odpovědí serveru. Pozdější divák vstoupí do aktuální fáze; animace se mu nespouští od začátku. Výherce se na stránce zobrazí až v čase vyhlášení.
+
+Viditelné stránky kontrolují stav každých 2,5 sekundy; skryté stránky neprovádějí pravidelné dotazy a při návratu si stav okamžitě obnoví. Zjištění nového tahu nebo stisknutí Pokračovat na jiném zařízení proto může mít zpoždění přibližně do 2,5 sekundy plus doba sítě. Po připojení se samotná animace řídí společnou časovou osou. Každý stavový dotaz představuje jeden Redis GET — otevřené stránky sdílejí bezplatný limit databáze s BikeRide.
+
+Zvuk na cizím zařízení může prohlížeč povolit až po interakci. Omezení pohybu respektujeme: čas vyhlášení zůstává společný, ale kolo se na takovém zařízení průběžně neotáčí.

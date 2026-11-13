@@ -1,6 +1,7 @@
 import http from 'node:http';
 import {readFileSync} from 'node:fs';
 import {load,save} from './store.mjs';
+import {createDrawPlan} from './public/timeline.js';
 import {randomInt,randomUUID,timingSafeEqual,createHash,createHmac} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('.',import.meta.url));
@@ -22,9 +23,9 @@ function rememberAdmin(req,res){
  res.setHeader('Set-Cookie',ADMIN_COOKIE+'='+expires+'.'+signSession(expires)+'; Max-Age='+ADMIN_AGE+'; Path=/; HttpOnly; SameSite=Strict'+(secure?'; Secure':''));
 }
 
-const assets={'/favicon.svg':['favicon.svg','image/svg+xml'],'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
+const assets={'/timeline.js':['timeline.js','text/javascript; charset=utf-8'],'/favicon.svg':['favicon.svg','image/svg+xml'],'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
 export async function handler(req,res){
- const reply=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data))};
+ const reply=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify({...data,serverNow:Date.now()}))};
  try{
  const path=new URL(req.url,'http://localhost').pathname;
  if(path.startsWith('/api/')){
@@ -36,20 +37,22 @@ export async function handler(req,res){
  if(req.method!=='POST')return reply(405,{error:'Nepodporovaná metoda.'});
  if(req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`&&req.headers.origin!==`https://${req.headers.host}`)return reply(403,{error:'Neplatný původ požadavku.'});
  let body='';for await(const chunk of req){body+=chunk;if(body.length>100000)return reply(413,{error:'Příliš mnoho dat.'})}const data=req.body&&typeof req.body==='object'?req.body:JSON.parse(typeof req.body==='string'?req.body:(body||'{}'));
+ if(path==='/api/complete'&&state.currentDraw?.completedAt&&state.currentDraw.winnerId===data.winnerId)return reply(200,{...state,lockedUntil});
  if(path!=='/api/complete'&&Date.now()<lockedUntil)return reply(409,{error:'Probíhá losování. Vyčkej na vyhlášení.'});
  if(data.revision!==state.revision)return reply(409,{error:'Seznam se změnil. Obnov stránku a zkus to znovu.'});
  let next=structuredClone(state);
  if(path==='/api/logout'){res.setHeader('Set-Cookie',ADMIN_COOKIE+'=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict'+(process.env.VERCEL?'; Secure':''));return reply(200,{ok:true})}
  if(path==='/api/complete'){
  if(!data.winnerId||next.winners.at(-1)?.id!==data.winnerId)return reply(409,{error:'Mezitím proběhlo jiné losování. Obnov stránku.'});
- next.lockedUntil=0;lockedUntil=0;await save(next,state.revision);state=next;
+ if(next.currentDraw&&Date.now()<next.currentDraw.revealAt)return reply(409,{error:'Ještě probíhá vyhlášení. Za okamžik můžeš pokračovat.'});
+ next.lockedUntil=0;if(next.currentDraw)next.currentDraw.completedAt=Date.now();lockedUntil=0;await save(next,state.revision);state=next;
  }else if(path==='/api/add'){
  const names=String(data.names||'').split(/\n/).map(n=>n.trim().replace(/\s+/g,' ')).filter(Boolean);
  if(!names.length||names.some(n=>n.length>80||!/^\p{L}[\p{L}\p{M}'’.-]*(?: [\p{L}\p{M}'’.-]+)+$/u.test(n)))return reply(400,{error:'Zadej jméno a příjmení, každého na samostatný řádek (max. 80 znaků).'});
  for(const name of names)if(!next.people.some(p=>p.name.toLocaleLowerCase('cs')===name.toLocaleLowerCase('cs')))next.people.push({id:randomUUID(),name});
  if(next.people.length>300)return reply(400,{error:'Maximum je 300 účastníků.'});await save(next,state.revision);state=next;
  }else if(path==='/api/remove'){next.people=next.people.filter(p=>p.id!==data.id);await save(next,state.revision);state=next}
- else if(path==='/api/reset'){next.winners=[];await save(next,state.revision);state=next}
+ else if(path==='/api/reset'){next.winners=[];next.currentDraw=null;next.rotation=0;await save(next,state.revision);state=next}
  else if(path==='/api/spin'){
  const available=next.people.filter(p=>!next.winners.some(w=>w.id===p.id));if(!available.length)return reply(400,{error:'Všichni už vyhráli. Resetuj losování.'});
  // Fresh unbiased Fisher–Yates shuffle using OS-backed cryptographic randomness.
@@ -61,8 +64,9 @@ export async function handler(req,res){
   pauseMs:randomInt(650,1501),extraTurns:randomInt(1,3),extraMs:randomInt(5000,7801),
   nearSectors:randomInt(60,141)/100
  };
- const animationMs=motion.launchMs+motion.cruiseMs+motion.slowMs+2700+(dramatic?motion.pauseMs+motion.extraMs:0);
- next.winners.push({...winner,at:new Date().toISOString()});next.lockedUntil=Date.now()+Math.max(30000,animationMs+5000);lockedUntil=next.lockedUntil;await save(next,state.revision);state=next;
+ const plan=createDrawPlan({id:randomUUID(),winnerId:winner.id,winnerIndex:next.people.findIndex(p=>p.id===winner.id),count:next.people.length,startRotation:next.rotation||0,startedAt:Date.now()+700,dramatic,motion});
+ next.currentDraw=plan;next.rotation=plan.endRotation;
+ next.winners.push({...winner,at:new Date().toISOString()});next.lockedUntil=plan.revealAt+10000;lockedUntil=next.lockedUntil;await save(next,state.revision);state=next;
  return reply(200,{state:{...state,lockedUntil},winner,dramatic,motion});
  }else return reply(404,{error:'Nenalezeno.'});
  return reply(200,{...state,lockedUntil});
@@ -73,3 +77,4 @@ export async function handler(req,res){
 }
 export const server=http.createServer(handler);
 if(process.argv[1]===fileURLToPath(import.meta.url))server.listen(Number(process.env.PORT||3080),process.env.HOST||'127.0.0.1',()=>console.log('Kolo štěstí: http://localhost:'+(process.env.PORT||3080))); 
+
