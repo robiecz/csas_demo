@@ -258,3 +258,7 @@ html.draw-focus{overflow:hidden}
 /* The rubber pointer deforms locally while its upper mounting stays fixed. */
 .pointer:before,.pointer:after{display:none}
 .pointer svg{display:block;width:100%;height:100%;overflow:visible}
+
+/* Narrow the pointer by 35%, preserving its height and centered mounting. */
+.pointer{width:23.4px}
+.pointer svg{overflow:visible}
