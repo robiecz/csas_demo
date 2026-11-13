@@ -44,3 +44,11 @@ body{padding-bottom:0}
 
 /* Hide the central arrow while a draw is in progress. */
 #spin.hub.is-spinning .spin-icon{visibility:hidden;animation:none}
+
+/* Focus the sidebar on the colleague selected for the next demo. */
+aside .intro{margin-bottom:28px}
+.current-presenter{margin-top:20px;font-size:clamp(30px,3.4vw,48px);font-weight:800;line-height:1.12;letter-spacing:-1.4px;color:var(--orange);overflow-wrap:anywhere}
+.current-presenter.is-empty{font-size:16px;font-weight:400;line-height:1.5;letter-spacing:0;color:var(--muted)}
+.history-card{border-top:1px solid var(--line);padding-top:24px}
+@media(max-width:800px){aside{display:block}aside .intro{margin-bottom:24px}.current-presenter{font-size:36px}}
+@media(max-width:480px){.brand{font-size:10px;gap:5px;letter-spacing:.7px}.brandmark{margin-right:3px}.current-presenter{font-size:32px}}
