@@ -95,3 +95,9 @@ header .tools{justify-self:end}
  .current-presenter{text-align:center;margin-left:auto;margin-right:auto}
 }
 
+
+/* Small multicoloured marquee bulbs replace the dotted wheel rim. */
+.wheel-wrap:after{display:none}
+.bulb-ring{position:absolute;inset:-11px;z-index:3;pointer-events:none;border-radius:50%}
+.bulb{position:absolute;width:clamp(4px,.6vw,7px);height:clamp(4px,.6vw,7px);border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle at 35% 30%,#fff 0%,#fff9 14%,var(--lamp) 48%,var(--lamp) 100%);border:1px solid #ffffff50;box-shadow:0 0 4px var(--lamp),0 0 10px var(--lamp),0 0 17px color-mix(in srgb,var(--lamp) 60%,transparent);filter:brightness(var(--lamp-power,.85));transition:opacity .28s ease,filter .28s ease}
+@media(prefers-reduced-motion:reduce){.bulb{transition:none}}
