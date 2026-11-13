@@ -1,0 +1,27 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+test('zvířátka: jedna postavička, různé strany a činnosti, vypnutí a mobil',()=>{
+ const stage={style:{setProperty(){}},dataset:{},setAttribute(){}};
+ let listener,timer,now=1000,reduced=false;
+ const context=vm.createContext({document:{createElement:()=>stage,body:{append(){}},addEventListener:(name,fn)=>listener=fn,querySelector:()=>({offsetWidth:760})},window:{addEventListener(){}},Date:{now:()=>now},innerWidth:1920,innerHeight:1080,matchMedia:()=>({matches:reduced}),setInterval:fn=>timer=fn});
+ vm.runInContext(readFileSync('public/animals.js','utf8'),context);
+ const detail={busy:true,enabled:true,plan:{id:'test-draw',startedAt:1000},offset:0};
+ const kinds=new Set(),actions=new Set(),sides=new Set();
+ for(let i=0;i<80;i++){
+  now=1000+i*6800;listener({detail});assert.equal(stage.hidden,false);
+  assert.equal((stage.innerHTML.match(/<svg /g)||[]).length,1);
+  const [,kind,action]=stage.innerHTML.match(/little-animal (dog|cat) action-(\w+)/);
+  kinds.add(kind);actions.add(action);sides.add(stage.dataset.side);
+  const left=parseFloat(stage.style.left),width=parseFloat(stage.style.width);
+  assert.ok(left>=24&&left+width<=1896);
+  assert.ok(left+width<580||left>1340,'postavička nezasahuje do kola');
+  const unchanged=stage.innerHTML;timer();assert.equal(stage.innerHTML,unchanged);
+ }
+ assert.equal(kinds.size,2);assert.equal(actions.size,6);assert.equal(sides.size,2);
+ listener({detail:{...detail,enabled:false}});assert.equal(stage.hidden,true);
+ listener({detail:{...detail,busy:false}});assert.equal(stage.hidden,true);
+ context.innerWidth=800;listener({detail});assert.equal(stage.hidden,true);
+ context.innerWidth=1920;reduced=true;listener({detail});assert.equal(stage.hidden,true);
+});
