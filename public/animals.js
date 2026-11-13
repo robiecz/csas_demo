@@ -42,21 +42,22 @@ function animalSvg(kind,action){
  </svg>`;
 }
 function update(){
- if(!snapshot?.busy||!snapshot.enabled||!snapshot.plan||innerWidth<1100||matchMedia('(prefers-reduced-motion: reduce)').matches){stage.hidden=true;lastKey='';return}
- const now=Date.now()+snapshot.offset,elapsed=Math.max(0,now-snapshot.plan.startedAt),slot=Math.floor(elapsed/6800);
- const key=snapshot.plan.id+':'+slot;if(key===lastKey)return;lastKey=key;
+ if(!snapshot?.busy||!snapshot.enabled||!snapshot.plan||snapshot.plan.completedAt||innerWidth<1100||matchMedia('(prefers-reduced-motion: reduce)').matches){stage.hidden=true;lastKey='';return}
+ const now=Date.now()+snapshot.offset,elapsed=Math.max(0,now-snapshot.plan.startedAt);
+ const key=snapshot.plan.id;if(key===lastKey)return;lastKey=key;
  const widthOfWheel=document.querySelector('.wheel-wrap').offsetWidth;
  const gap=(innerWidth-widthOfWheel)/2;
  const gaps=[gap,gap],rng=random(key);
  let side=rng()<.5?0:1;if(gaps[side]<140)side=1-side;
  if(gaps[side]<140){stage.hidden=true;return}
- const width=Math.min(210,gaps[side]-48),x=24+rng()*Math.max(0,gaps[side]-width-48);
+ const width=Math.min(310,gaps[side]-48),x=24+rng()*Math.max(0,gaps[side]-width-48);
  const top=Math.max(24,Math.min(innerHeight-width-24,innerHeight*(.28+rng()*.4)));
  const kind=rng()<.5?'dog':'cat',actions=['sniff','paw','groom','scratch','yawn','wag'];
  const action=actions[Math.floor(rng()*actions.length)];
- stage.innerHTML=animalSvg(kind,action);stage.dataset.side=String(side);
+ stage.innerHTML='<div class="animal-reveal"><div class="animal-emerge">'+animalSvg(kind,action)+'</div></div>';stage.dataset.side=String(side);
  stage.style.width=width+'px';stage.style.left=(side===0?x:innerWidth-x-width)+'px';stage.style.top=top+'px';
- stage.style.setProperty('--animal-delay',-(elapsed%6800)/1000+'s');stage.hidden=false;
+ stage.style.setProperty('--animal-delay',-elapsed/1000+'s');
+ stage.style.setProperty('--emerge-delay',-Math.min(elapsed,1400)/1000+'s');stage.hidden=false;
 }
 document.addEventListener('wheel-state',event=>{snapshot=event.detail;update()});
 window.addEventListener('resize',()=>{lastKey='';update()});
