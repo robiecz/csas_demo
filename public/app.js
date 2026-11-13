@@ -119,6 +119,24 @@ function draw(){updateBulbs();const size=1200,c=600,r=598,n=state.people.length;
  ctx.restore();
 }ctx.strokeStyle='#ffffff28';ctx.lineWidth=2;ctx.stroke();ctx.save();ctx.rotate((start+end)/2);ctx.fillStyle='#FFFFFF';ctx.strokeStyle='rgba(8,12,23,.75)';ctx.lineWidth=3.5;ctx.lineJoin='round';ctx.shadowColor='rgba(0,0,0,.75)';ctx.shadowBlur=5;ctx.shadowOffsetY=2;ctx.textAlign='right';ctx.textBaseline='middle';const font=Math.max(11,Math.min(33,650/n));ctx.font=`650 ${font}px -apple-system, sans-serif`;let label=p.name;while(ctx.measureText(label).width>410&&label.length>3)label=label.slice(0,-2)+'…';ctx.strokeText(label,535,0);ctx.fillText(label,535,0);ctx.restore()});ctx.restore()}
 function tone(freq,duration=.035,type='sine',volume=.07,delay=0){if(!on||!audio||audio.state!=='running')return;const t=audio.currentTime+delay,o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(volume,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(audioMaster||audio.destination);o.start(t);o.stop(t+duration)}
+// Short slot-machine-style win cues follow the three sector flashes.
+let highlightSoundDrawId=null,highlightSoundCue=-1;
+function playHighlightSound(plan,now){
+ const duration=plan.revealAt-plan.stoppedAt,elapsed=now-plan.stoppedAt;
+ if(duration<=0||elapsed<0||elapsed>=duration)return;
+ if(highlightSoundDrawId!==plan.id){highlightSoundDrawId=plan.id;highlightSoundCue=-1}
+ const moments=[0,duration/6,duration/2,duration*5/6];
+ let cue=-1;for(let i=0;i<moments.length;i++)if(elapsed>=moments[i])cue=i;
+ if(cue<=highlightSoundCue)return;highlightSoundCue=cue;
+ // A late spectator hears upcoming flashes, never a backlog of missed sounds.
+ if(!on||!audio||audio.state!=='running'||elapsed-moments[cue]>180)return;
+ if(cue===0){[1047,1319,1568,2093].forEach((freq,i)=>tone(freq,.12,'triangle',.045,i*.065));return}
+ const root=[0,1047,1319,1568][cue];
+ tone(root,.30,'sine',.095);
+ tone(root*2,.22,'sine',.035,.015);
+ tone(root*1.5,.18,'triangle',.035,.07);
+ tone(root*2,.16,'sine',.03,.14);
+}
 function tick(){const sector=Math.floor(rotation/(TAU/Math.max(1,state.people.length)));if(sector!==lastTick){lastTick=sector;tone(1100+Math.random()*200,.035,'triangle',.055)}}
 function prepareCelebration(){
  if(celebrationBuffer)return Promise.resolve(celebrationBuffer);
@@ -160,6 +178,7 @@ function runSharedFrame(){
  const key=plan.id+':'+view.phase;
  if(key!==phaseKey){phaseKey=key;render()}
  draw();if(view.phase==='spinning')tick();
+ if(view.phase==='highlight')playHighlightSound(plan,serverNow());
  if(view.phase==='revealed'&&!plan.completedAt){
   lastDrawId=plan.winnerId;
   if(shownDrawId!==plan.id){
