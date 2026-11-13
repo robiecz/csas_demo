@@ -6,7 +6,7 @@ export async function resolveSet(slug){
  if(!slug){const r=await registry();return {id:'default',name:r.defaultName,slug:''}}
  const r=await registry(),set=r.sets.find(s=>!s.deletedAt&&s.slug===slug);if(!set)fail(404,'Tato sada neexistuje nebo byla odstraněna.');return set;
 }
-function namesList(input){const names=String(input||'').split(/\n/).map(n=>n.trim().replace(/\s+/g,' ')).filter(Boolean);if(names.length>300||names.some(n=>n.length>80||!/^\p{L}[\p{L}\p{M}'’.-]*(?: [\p{L}\p{M}'’.-]+)+$/u.test(n)))fail(400,'Zadej jméno a příjmení na každý řádek, nejvýše 300 osob a 80 znaků na jméno.');return [...new Map(names.map(n=>[n.toLocaleLowerCase('cs'),n])).values()]}
+function namesList(input){const names=String(input||'').split(/\n/).map(n=>n.trim().replace(/\s+/g,' ')).filter(Boolean);if(names.length>300||names.some(n=>n.length>80||!/^\p{L}[\p{L}\p{M}\p{N} '’.-]*$/u.test(n)))fail(400,'Každé jméno nebo název zadej na nový řádek (max. 300 položek a 80 znaků). Použij písmena, čísla, mezery, tečky, pomlčky nebo apostrofy.');return [...new Map(names.map(n=>[n.toLocaleLowerCase('cs'),n])).values()]}
 export function slugify(value){return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,70)}
 export async function manageSets(path,data={}){
  const r=await registry(),active=r.sets.filter(s=>!s.deletedAt);
