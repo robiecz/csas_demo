@@ -54,3 +54,19 @@ test('mechanický dojezd: náhodné místo v celé výseči a pomalé zhoupnutí
   assert.deepEqual(sampleDraw(plan,plan.stoppedAt-500),sampleDraw(JSON.parse(JSON.stringify(plan)),plan.stoppedAt-500));
  }
 });
+
+test('přímý dojezd se po zastavení znovu nerozjíždí; napínavé varianty jsou volitelné',()=>{
+ for(const dramatic of [false,true])for(const finalNudge of [false,true]){
+  const plan=createDrawPlan({id:'variants',winnerId:'winner',winnerIndex:5,count:13,startRotation:1,startedAt:1000,dramatic,motion:{...motion,landingFraction:.96,finalNudge,rock:true}});
+  assert.equal(plan.phases.some(p=>p.kind==='pause'),dramatic);
+  assert.equal(plan.phases.some(p=>p.easing==='creep'),finalNudge);
+  if(!dramatic&&!finalNudge){
+   assert.equal(plan.phases.length,3);
+   const coast=plan.phases.at(-1);let previous=-Infinity;
+   for(let t=0;t<coast.duration;t+=20){const angle=sampleDraw(plan,plan.startedAt+coast.start+t).angle;assert.ok(angle>previous);previous=angle}
+   assert.equal(sampleDraw(plan,plan.stoppedAt).phase,'highlight');
+   assert.equal(sampleDraw(plan,plan.stoppedAt+1000).phase,'highlight');
+  }
+  const sector=Math.floor((((TAU-plan.endRotation)%TAU+TAU)%TAU)/(TAU/13));assert.equal(sector,5);
+ }
+});
