@@ -216,6 +216,7 @@ html.draw-focus{overflow:hidden}
 .action-chew .guest-muzzle{animation:guest-chew .55s ease-in-out infinite}.action-ears .guest-ears{animation:guest-ears .75s ease-in-out infinite alternate}
 .action-look .guest-head{animation:guest-look 2.8s ease-in-out infinite}.action-prance .guest-body{animation:guest-hop .85s ease-in-out infinite}.action-prance .guest-legs{transform-origin:120px 150px;animation:guest-prance .85s ease-in-out infinite}
 .guest-tongue{transform-origin:107px 99px;opacity:0}
+.snake .guest-tongue{animation:guest-tongue 2.3s ease-in-out infinite;filter:drop-shadow(0 0 2px #ff82b366)}
 .action-slither .guest-body{animation:guest-slither 2.5s ease-in-out infinite}.action-tongue .guest-tongue{animation:guest-tongue 1.6s ease-in-out infinite}
 .action-sway .guest-head{animation:guest-sway 2.2s ease-in-out infinite}.action-coil .guest-coil{transform-origin:120px 180px;animation:guest-coil 2s ease-in-out infinite}
 .guest-wing.left{transform-origin:85px 105px}.guest-wing.right{transform-origin:137px 105px}
@@ -232,7 +233,7 @@ html.draw-focus{overflow:hidden}
 @keyframes guest-look{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(16deg)}}
 @keyframes guest-prance{25%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}}
 @keyframes guest-slither{0%,100%{transform:translateX(-10px) skewX(-4deg)}50%{transform:translateX(10px) skewX(4deg)}}
-@keyframes guest-tongue{0%,30%,70%,100%{opacity:0;transform:scaleY(.1)}40%,60%{opacity:1;transform:scaleY(1)}}
+@keyframes guest-tongue{0%,15%,90%,100%{opacity:0;transform:scaleY(.1)}25%,45%,65%,80%{opacity:1;transform:scaleY(1)}35%,55%,73%{opacity:1;transform:scaleY(.6)}}
 @keyframes guest-sway{0%,100%{transform:translateX(-15px) rotate(-18deg)}50%{transform:translateX(15px) rotate(18deg)}}
 @keyframes guest-coil{50%{transform:scale(.84,1.16)}}
 @keyframes guest-flap-left{50%{transform:rotate(65deg)}}@keyframes guest-flap-right{50%{transform:rotate(-65deg)}}
