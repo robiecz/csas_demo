@@ -70,3 +70,37 @@ test('přímý dojezd se po zastavení znovu nerozjíždí; napínavé varianty 
   const sector=Math.floor((((TAU-plan.endRotation)%TAU+TAU)%TAU)/(TAU/13));assert.equal(sector,5);
  }
 });
+
+test('fyzikální dojezd: setrvačnost, klesající rychlost, překmit a tlumený návrat',()=>{
+ for(const count of [1,2,13,300])for(const fraction of [.015,.2,.5,.9,.985])for(const dramatic of [false,true])for(const finalNudge of [false,true]){
+  const plan=createDrawPlan({id:'physics',winnerId:'win',winnerIndex:count-1,count,startRotation:.7,startedAt:1000,dramatic,motion:{...motion,physicsVersion:1,landingFraction:fraction,finalNudge,stiffness:22,damping:3.2,friction:.045}});
+  const clone=JSON.parse(JSON.stringify(plan));
+  for(const phase of plan.phases){
+   if(phase.easing==='friction'){
+    let prev=phase.from,prevSpeed=Infinity;
+    for(let t=1;t<=100;t++){
+     const at=plan.startedAt+phase.start+phase.duration*t/100;
+     // Use an interior endpoint to avoid the normalized angle after the final stop.
+     const angle=sampleDraw(plan,Math.min(at,plan.stoppedAt-.00001)).angle;
+     const speed=(angle-prev)/(phase.duration/100);
+     assert.ok(speed>=-1e-7);assert.ok(speed<=prevSpeed+1e-6,'tření průběžně snižuje rychlost');prev=angle;prevSpeed=speed;
+    }
+   }
+   if(phase.easing==='detent'){
+    assert.ok(phase.samples.some(a=>a>phase.to),'setrvačnost způsobí překmit');
+    const peaks=[];
+    for(let i=1;i<phase.samples.length-1;i++){
+     const a=phase.samples[i]-phase.to,b=phase.samples[i-1]-phase.to,c=phase.samples[i+1]-phase.to;
+     if(a>b&&a>c||a<b&&a<c)peaks.push(Math.abs(a));
+    }
+    assert.ok(peaks.length>=(fraction>.95?1:2),'větší energie vyvolá více zhoupnutí, malé překročení rychle utlumí tření');
+    for(let i=1;i<peaks.length;i++)assert.ok(peaks[i]<peaks[i-1]+1e-8,'tření tlumí další překmity');
+    assert.equal(phase.samples.at(-1),phase.to);
+    assert.ok(JSON.stringify(phase).length<16000);
+   }
+   assert.deepEqual(sampleDraw(plan,plan.startedAt+phase.start+phase.duration*.71),sampleDraw(clone,plan.startedAt+phase.start+phase.duration*.71));
+  }
+  const angle=((TAU-plan.endRotation)%TAU+TAU)%TAU;assert.ok(Math.abs(angle-(count-1+fraction)*TAU/count)<1e-8);
+  assert.equal(sampleDraw(plan,plan.stoppedAt).phase,'highlight');
+ }
+});
