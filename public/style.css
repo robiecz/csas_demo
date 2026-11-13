@@ -254,3 +254,7 @@ html.draw-focus{overflow:hidden}
 .bulb-ring.welcome .bulb:nth-child(4n){--welcome-delay:.21s}
 @keyframes lamp-welcome{0%,30%,60%{opacity:.28;filter:brightness(.45)}15%,45%,75%{opacity:1;filter:brightness(1.8)}100%{opacity:.85;filter:brightness(.85)}}
 @media(prefers-reduced-motion:reduce){.bulb-ring.welcome .bulb{animation:none}}
+
+/* The rubber pointer deforms locally while its upper mounting stays fixed. */
+.pointer:before,.pointer:after{display:none}
+.pointer svg{display:block;width:100%;height:100%;overflow:visible}
