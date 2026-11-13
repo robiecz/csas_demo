@@ -10,6 +10,8 @@ export function createDrawPlan({id,winnerId,winnerIndex,count,startRotation=0,st
  const sector=TAU/count,target=normalize(TAU-(winnerIndex+fraction)*sector);
  const finishLanding=(landing,duration,easing)=>{
   if(!Number.isFinite(motion.landingFraction)){add(landing,duration,easing);return}
+  // Most draws finish in one uninterrupted deceleration, with no forced restart.
+  if(motion.finalNudge===false){add(landing,duration,'glide');return}
   const approach=sector*(motion.approachSectors||.6);
   // A long coast followed by a very slow final nudge across the sector boundary.
   add(landing-approach,duration,'coast');
@@ -37,7 +39,7 @@ export function sampleDraw(plan,now){
  for(const part of plan.phases){
   if(elapsed<part.start+part.duration){
    const p=Math.max(0,Math.min(1,(elapsed-part.start)/part.duration));
-   const ease=part.easing==='accelerate'?p*p:part.easing==='coast'?1-(1-p)**3.6:part.easing==='finish'?1-(1-p)**3:part.easing==='creep'?(1-Math.cos(Math.PI*p))/2:part.easing==='settle'?1-Math.exp(-5*p)*Math.cos(p*Math.PI*2)*(1-p):p;
+   const ease=part.easing==='accelerate'?p*p:part.easing==='coast'?1-(1-p)**3.6:part.easing==='finish'?1-(1-p)**3:part.easing==='glide'?1-(1-p)**2.4:part.easing==='creep'?(1-Math.cos(Math.PI*p))/2:part.easing==='settle'?1-Math.exp(-5*p)*Math.cos(p*Math.PI*2)*(1-p):p;
    return {angle:part.from+(part.to-part.from)*ease,phase:'spinning',pulse:0,kind:part.kind};
   }
  }
