@@ -69,3 +69,14 @@ header .tools{justify-self:end}
 .header-motto{margin:0;text-align:center;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
 @media(max-width:900px){header{grid-template-columns:1fr auto;gap:8px 16px}.header-motto{grid-column:1/-1;grid-row:2;font-size:10px;padding:4px 0}.tools{grid-column:2;grid-row:1}}
 
+
+/* More space for the presenter heading, with the wheel aligned left. */
+@media(min-width:801px){
+ main{max-width:1440px;padding-left:3%;padding-right:3%}
+ .arena{grid-template-columns:minmax(0,1.35fr) minmax(340px,1fr);gap:32px}
+ .wheel-section{align-items:flex-start}
+ .wheel-base{align-self:center}
+ aside .intro h1{font-size:clamp(24px,2.5vw,36px);white-space:nowrap}
+}
+@media(min-width:1100px){.arena{grid-template-columns:minmax(0,1.3fr) minmax(420px,1fr);gap:40px}}
+@media(max-width:800px){aside .intro h1{font-size:clamp(24px,5vw,32px)}}
