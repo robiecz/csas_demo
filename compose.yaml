@@ -11,3 +11,4 @@ services:
       - kolo-data:/app/data
 volumes:
   kolo-data:
+

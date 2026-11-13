@@ -22,3 +22,4 @@ test('autorizace, validace, losování, souběh, reset a persistence',async()=>{
  s=(await request('/api/remove',{revision:s.revision,id:s.people[0].id})).data;assert.equal(s.people.length,1);
  }finally{rmSync(dir,{recursive:true,force:true})}
 });
+

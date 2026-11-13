@@ -110,3 +110,9 @@ header .tools{justify-self:end}
 
 /* Center the presenter name and its heading on the same axis. */
 .arena>aside .intro,.arena>aside .intro h1,.arena>aside .current-presenter{text-align:center}
+
+
+/* Set management and top-layer celebration. */
+.sets-manager{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:24px}.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}.set-row strong,.set-row a{display:block;overflow-wrap:anywhere}.set-row strong{font-size:14px}.set-row a{color:var(--orange);font-size:11px;margin-top:5px}.set-actions{display:flex;gap:6px}.set-actions button{font-size:12px;padding:9px 11px}#sets-message{font-size:13px}#set-editor{padding-top:12px}#set-editor[hidden]{display:none}.set-actions .primary{width:auto;flex:1}#admin-dialog{width:min(640px,calc(100% - 28px))}#confetti[popover]{position:fixed;inset:0;margin:0;padding:0;border:0;background:transparent;max-width:none;max-height:none;pointer-events:none}#confetti:popover-open{display:block}@media(max-width:480px){.set-row{align-items:flex-start;flex-direction:column}}
+
+#confetti::backdrop{background:transparent;pointer-events:none}

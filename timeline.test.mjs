@@ -18,3 +18,4 @@ test('pozdější divák vidí ve stejném čase stejnou fázi i úhel',()=>{
   plan.completedAt=plan.revealAt+50;assert.equal(sampleDraw(plan,plan.revealAt+100).phase,'complete');
  }
 });
+

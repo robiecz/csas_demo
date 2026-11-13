@@ -25,3 +25,4 @@ test('365denní přihlášení a okamžité další losování',async()=>{
  assert.equal((await request('/api/complete',{revision:second.data.state.revision,winnerId:first.winner.id})).status,409);
  }finally{rmSync(dir,{recursive:true,force:true})}
 });
+

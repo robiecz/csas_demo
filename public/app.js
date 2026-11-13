@@ -1,4 +1,5 @@
 import {sampleDraw} from '/timeline.js';
+const currentSlug=decodeURIComponent(location.pathname.replace(/^\/+|\/+$/g,''));
 const $=id=>document.getElementById(id),TAU=Math.PI*2;
 // Design Colours from the supplied palette.
 const palette=['#0072EF','#009B9C','#00AB2E','#007F5F','#00516D','#7D2277','#FF3475','#FF4D00'];
@@ -53,7 +54,7 @@ function updateBulbs(){
 
 async function api(path,data){
  const sent=Date.now();
- const res=await fetch('/api/'+path,{method:data?'POST':'GET',cache:'no-store',signal:AbortSignal.timeout(12000),headers:{'Content-Type':'application/json',...(auth?{Authorization:auth}:{})},...(data?{body:JSON.stringify({...data,revision:state.revision})}:{})});
+ const res=await fetch('/api/'+path+(currentSlug?'?set='+encodeURIComponent(currentSlug):''),{method:data?'POST':'GET',cache:'no-store',signal:AbortSignal.timeout(12000),headers:{'Content-Type':'application/json',...(auth?{Authorization:auth}:{})},...(data?{body:JSON.stringify({...data,revision:state.revision})}:{})});
  const result=await res.json(),received=Date.now(),rtt=received-sent;
  if(Number.isFinite(result.serverNow)&&(rtt<=bestClockRtt||received-lastClockSync>60000)){clockOffset=result.serverNow-(sent+received)/2;bestClockRtt=rtt;lastClockSync=received}
  if(!res.ok)throw Error(result.error||'Server není dostupný.');return result;
@@ -103,7 +104,7 @@ function unlockAudio(){
 }
 function applySnapshot(next){
  if(next.revision<state.revision)return;
- state=next;cancelAnimationFrame(sharedFrame);phaseKey='';
+ state=next;if(state.set){document.title=state.set.name+' · DEMO kolo';const caption=document.getElementById('set-caption');if(caption)caption.remove();if(state.set.slug){const label=document.createElement('p');label.id='set-caption';label.className='caption';label.textContent=state.set.name;document.querySelector('.intro')?.prepend(label)}}cancelAnimationFrame(sharedFrame);phaseKey='';
  if(!state.currentDraw){busy=false;rotation=state.rotation||0;highlightedId=null;highlightPulse=0;shownDrawId=null;if($('winner-dialog').open)$('winner-dialog').close();render();return}
  runSharedFrame();
 }
@@ -144,7 +145,7 @@ $('continue').onclick=async()=>{
  }finally{button.disabled=false;button.textContent='Pokračovat v losování ↗'}
 };
 $('admin').onclick=()=>{if(busy)return;$('admin-error').textContent='';$('admin-dialog').showModal()};document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
-$('login-form').onsubmit=async e=>{e.preventDefault();try{auth='Basic '+btoa('admin:'+unescape(encodeURIComponent($('password').value)));await api('auth');auth='';$('password').value='';$('login-form').hidden=true;$('admin-panel').hidden=false;render()}catch(error){auth='';$('admin-error').textContent=error.message}};
+$('login-form').onsubmit=async e=>{e.preventDefault();try{auth='Basic '+btoa('admin:'+unescape(encodeURIComponent($('password').value)));await api('auth');auth='';$('password').value='';$('login-form').hidden=true;$('admin-panel').hidden=false;document.dispatchEvent(new Event('admin-ready'));render()}catch(error){auth='';$('admin-error').textContent=error.message}};
 $('add-form').onsubmit=async e=>{e.preventDefault();try{state=await api('add',{names:$('names').value});$('names').value='';$('admin-error').textContent='';render()}catch(error){$('admin-error').textContent=error.message}};
 $('reset').onclick=async()=>{
  if(!confirm('Vrátit všechny kolegy do hry? Dosavadní výběry se vymažou a všichni budou znovu ve hře.'))return;
@@ -164,7 +165,24 @@ async function enterAutoFullscreen(){
  try{await document.documentElement.requestFullscreen()}catch{/* Standard browsers may refuse fullscreen without user activation. */}
 }
 void enterAutoFullscreen();
-function confetti(){const el=$('confetti'),c=el.getContext('2d'),w=el.width=innerWidth*devicePixelRatio,h=el.height=innerHeight*devicePixelRatio,particles=Array.from({length:180},()=>({x:w/2,y:h*.4,vx:(Math.random()-.5)*24*devicePixelRatio,vy:(-Math.random()*17-3)*devicePixelRatio,size:(Math.random()*6+3)*devicePixelRatio,color:palette[Math.floor(Math.random()*8)],a:Math.random()*6}));const start=performance.now();let last=start;function frame(now){const dt=Math.min(2,(now-last)/16.67);last=now;c.clearRect(0,0,w,h);particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=.17*devicePixelRatio*dt;p.a+=.07*dt;c.save();c.translate(p.x,p.y);c.rotate(p.a);c.fillStyle=p.color;c.fillRect(-p.size/2,-p.size/2,p.size,p.size*.5);c.restore()});if(now-start<5500)requestAnimationFrame(frame);else c.clearRect(0,0,w,h)}requestAnimationFrame(frame)}
+function confetti(){
+ const el=$('confetti'),c=el.getContext('2d'),w=el.width=innerWidth*devicePixelRatio,h=el.height=innerHeight*devicePixelRatio;
+ try{el.showPopover?.()}catch{}
+ if(!el.showPopover)$('winner-dialog').append(el);
+ const particles=Array.from({length:540},(_,i)=>{
+  const side=i%2,delay=i<180?0:i<360?.65:1.3;
+  return {side,delay,vx:(side?-1:1)*(.25+Math.random()*.65),vy:-.7-Math.random()*.8,gravity:.85+Math.random()*.3,size:(Math.random()*6+4)*devicePixelRatio,color:palette[i%palette.length],a:Math.random()*6,spin:(Math.random()-.5)*14};
+ });
+ const start=performance.now();
+ function frame(now){
+  const time=(now-start)/1000;c.clearRect(0,0,w,h);
+  for(const p of particles){const t=time-p.delay;if(t<0)continue;const x=(p.side?w:0)+p.vx*w*t*.55,y=h*.85+p.vy*h*t*.65+.5*p.gravity*h*t*t*.45;
+   c.save();c.translate(x,y);c.rotate(p.a+p.spin*t);c.fillStyle=p.color;c.globalAlpha=Math.min(1,Math.max(0,7-time));c.fillRect(-p.size/2,-p.size/2,p.size,p.size*.55);c.restore();
+  }
+  if(time<7&&$('winner-dialog').open)requestAnimationFrame(frame);else{c.clearRect(0,0,w,h);try{el.hidePopover?.()}catch{}}
+ }
+ requestAnimationFrame(frame);
+}
 async function refresh(){
  if(refreshing||requestingSpin)return;refreshing=true;
  try{applySnapshot(await api('state'))}
@@ -175,6 +193,7 @@ void refresh();setInterval(()=>{if(!document.hidden)void refresh()},2500);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh()});
 
 // Restore the device's HttpOnly administrator session without storing the password in JavaScript.
-async function restoreAdminSession(){try{await api('auth');$('login-form').hidden=true;$('admin-panel').hidden=false}catch{}}
+async function restoreAdminSession(){try{await api('auth');$('login-form').hidden=true;$('admin-panel').hidden=false;document.dispatchEvent(new Event('admin-ready'))}catch{}}
 void restoreAdminSession();
+
 

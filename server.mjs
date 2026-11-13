@@ -1,6 +1,7 @@
 import http from 'node:http';
 import {readFileSync} from 'node:fs';
 import {load,save} from './store.mjs';
+import {resolveSet,manageSets} from './sets.mjs';
 import {createDrawPlan} from './public/timeline.js';
 import {randomInt,randomUUID,timingSafeEqual,createHash,createHmac} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
@@ -23,14 +24,27 @@ function rememberAdmin(req,res){
  res.setHeader('Set-Cookie',ADMIN_COOKIE+'='+expires+'.'+signSession(expires)+'; Max-Age='+ADMIN_AGE+'; Path=/; HttpOnly; SameSite=Strict'+(secure?'; Secure':''));
 }
 
-const assets={'/timeline.js':['timeline.js','text/javascript; charset=utf-8'],'/favicon.svg':['favicon.svg','image/svg+xml'],'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
+const assets={'/sets-ui.js':['sets-ui.js','text/javascript; charset=utf-8'],'/timeline.js':['timeline.js','text/javascript; charset=utf-8'],'/favicon.svg':['favicon.svg','image/svg+xml'],'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
 export async function handler(req,res){
- const reply=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify({...data,serverNow:Date.now()}))};
+ let selectedSet;
+ const reply=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify({...data,...(data.people?{set:selectedSet}:{}),serverNow:Date.now()}))};
  try{
- const path=new URL(req.url,'http://localhost').pathname;
+ const url=new URL(req.url,'http://localhost'),path=url.pathname;
  if(path.startsWith('/api/')){
  if(!password)return reply(503,{error:'Administrace zatím nemá nastavené heslo.'});
- let state=await load();let lockedUntil=state.lockedUntil||0;
+ if(path==='/api/sets'||path.startsWith('/api/sets/')){
+ if(!authorized(req))return reply(401,{error:'Přihlas se do administrace.'});
+ if(req.method==='GET'&&path==='/api/sets')return reply(200,await manageSets(path));
+ if(req.method!=='POST'||path==='/api/sets')return reply(405,{error:'Nepodporovaná metoda.'});
+ if(req.headers.origin&&req.headers.origin!==`https://${req.headers.host}`&&req.headers.origin!==`http://${req.headers.host}`)return reply(403,{error:'Neplatný původ požadavku.'});
+ let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>100000)return reply(413,{error:'Příliš mnoho dat.'})}
+ const body=req.body&&typeof req.body==='object'?req.body:JSON.parse(typeof req.body==='string'?req.body:(raw||'{}'));
+ return reply(200,await manageSets(path,body));
+ }
+ selectedSet=await resolveSet(url.searchParams.get('set')||'');
+ const scope=selectedSet.id==='default'?undefined:selectedSet.id;
+ const saveSet=(next,revision)=>save(next,revision,scope);
+ let state=await load(scope);let lockedUntil=state.lockedUntil||0;
  if(req.method==='GET'&&path==='/api/state')return reply(200,{...state,lockedUntil});
  if(!(req.method==='POST'&&['/api/spin','/api/complete'].includes(path))&&!authorized(req))return reply(401,{error:'Nesprávné heslo administrátora.'});
  if(req.method==='GET'&&path==='/api/auth'){rememberAdmin(req,res);return reply(200,{ok:true})}
@@ -45,14 +59,14 @@ export async function handler(req,res){
  if(path==='/api/complete'){
  if(!data.winnerId||next.winners.at(-1)?.id!==data.winnerId)return reply(409,{error:'Mezitím proběhlo jiné losování. Obnov stránku.'});
  if(next.currentDraw&&Date.now()<next.currentDraw.revealAt)return reply(409,{error:'Ještě probíhá vyhlášení. Za okamžik můžeš pokračovat.'});
- next.lockedUntil=0;if(next.currentDraw)next.currentDraw.completedAt=Date.now();lockedUntil=0;await save(next,state.revision);state=next;
+ next.lockedUntil=0;if(next.currentDraw)next.currentDraw.completedAt=Date.now();lockedUntil=0;await saveSet(next,state.revision);state=next;
  }else if(path==='/api/add'){
  const names=String(data.names||'').split(/\n/).map(n=>n.trim().replace(/\s+/g,' ')).filter(Boolean);
  if(!names.length||names.some(n=>n.length>80||!/^\p{L}[\p{L}\p{M}'’.-]*(?: [\p{L}\p{M}'’.-]+)+$/u.test(n)))return reply(400,{error:'Zadej jméno a příjmení, každého na samostatný řádek (max. 80 znaků).'});
  for(const name of names)if(!next.people.some(p=>p.name.toLocaleLowerCase('cs')===name.toLocaleLowerCase('cs')))next.people.push({id:randomUUID(),name});
- if(next.people.length>300)return reply(400,{error:'Maximum je 300 účastníků.'});await save(next,state.revision);state=next;
- }else if(path==='/api/remove'){next.people=next.people.filter(p=>p.id!==data.id);await save(next,state.revision);state=next}
- else if(path==='/api/reset'){next.winners=[];next.currentDraw=null;next.rotation=0;await save(next,state.revision);state=next}
+ if(next.people.length>300)return reply(400,{error:'Maximum je 300 účastníků.'});await saveSet(next,state.revision);state=next;
+ }else if(path==='/api/remove'){next.people=next.people.filter(p=>p.id!==data.id);await saveSet(next,state.revision);state=next}
+ else if(path==='/api/reset'){next.winners=[];next.currentDraw=null;next.rotation=0;await saveSet(next,state.revision);state=next}
  else if(path==='/api/spin'){
  const available=next.people.filter(p=>!next.winners.some(w=>w.id===p.id));if(!available.length)return reply(400,{error:'Všichni už vyhráli. Resetuj losování.'});
  // Fresh unbiased Fisher–Yates shuffle using OS-backed cryptographic randomness.
@@ -66,15 +80,16 @@ export async function handler(req,res){
  };
  const plan=createDrawPlan({id:randomUUID(),winnerId:winner.id,winnerIndex:next.people.findIndex(p=>p.id===winner.id),count:next.people.length,startRotation:next.rotation||0,startedAt:Date.now()+700,dramatic,motion});
  next.currentDraw=plan;next.rotation=plan.endRotation;
- next.winners.push({...winner,at:new Date().toISOString()});next.lockedUntil=plan.revealAt+10000;lockedUntil=next.lockedUntil;await save(next,state.revision);state=next;
- return reply(200,{state:{...state,lockedUntil},winner,dramatic,motion});
+ next.winners.push({...winner,at:new Date().toISOString()});next.lockedUntil=plan.revealAt+10000;lockedUntil=next.lockedUntil;await saveSet(next,state.revision);state=next;
+ return reply(200,{state:{...state,lockedUntil,set:selectedSet},winner,dramatic,motion});
  }else return reply(404,{error:'Nenalezeno.'});
  return reply(200,{...state,lockedUntil});
  }
- const asset=assets[path];if(req.method!=='GET'||!asset){res.writeHead(404);return res.end('Nenalezeno')}
+ const asset=assets[path]||(/^\/[a-z0-9-]+\/?$/.test(path)?assets['/']:null);if(req.method!=='GET'||!asset){res.writeHead(404);return res.end('Nenalezeno')}
  res.writeHead(200,{'Content-Type':asset[1],'X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'",'Cache-Control':'no-cache'});res.end(readFileSync(root+'public/'+asset[0]));
  }catch(e){console.error(e.message);reply(e.status||500,{error:e.status?e.message:'Požadavek se nepodařilo dokončit.'})}
 }
 export const server=http.createServer(handler);
 if(process.argv[1]===fileURLToPath(import.meta.url))server.listen(Number(process.env.PORT||3080),process.env.HOST||'127.0.0.1',()=>console.log('Kolo štěstí: http://localhost:'+(process.env.PORT||3080))); 
+
 

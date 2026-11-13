@@ -25,3 +25,4 @@ export function sampleDraw(plan,now){
  if(now<plan.revealAt&&!plan.completedAt){const p=(now-plan.stoppedAt)/(plan.revealAt-plan.stoppedAt);return {angle:plan.endRotation,phase:'highlight',pulse:.5-.5*Math.cos(p*TAU*3)}}
  return {angle:plan.endRotation,phase:plan.completedAt?'complete':'revealed',pulse:.6};
 }
+

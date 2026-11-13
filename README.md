@@ -49,3 +49,10 @@ Server ukládá pro každý tah `currentDraw`: identifikátor, serverový čas z
 Viditelné stránky kontrolují stav každých 2,5 sekundy; skryté stránky neprovádějí pravidelné dotazy a při návratu si stav okamžitě obnoví. Zjištění nového tahu nebo stisknutí Pokračovat na jiném zařízení proto může mít zpoždění přibližně do 2,5 sekundy plus doba sítě. Po připojení se samotná animace řídí společnou časovou osou. Každý stavový dotaz představuje jeden Redis GET — otevřené stránky sdílejí bezplatný limit databáze s BikeRide.
 
 Zvuk na cizím zařízení může prohlížeč povolit až po interakci. Omezení pohybu respektujeme: čas vyhlášení zůstává společný, ale kolo se na takovém zařízení průběžně neotáčí.
+
+
+## Více sad
+
+Administrace obsahuje správu sad s názvem, vlastní adresou a hromadnou úpravou jmen. Výchozí sada na `/` zachovává původní Redis klíč, data ani výsledky se nemigrují ani nemažou. Nové sady mají samostatné záznamy podle UUID; změna názvu či adresy nemění jejich identitu. Úpravy jmen a seznamu sad se v Redis zapisují atomicky s kontrolou obou revizí. Sadu při probíhajícím losování nelze upravovat ani odstranit. Odstranění skryje její adresu a seznam, interní data se ponechají pro případnou obnovu.
+
+Přejmenování sady zachovává její adresu, pokud ji správce výslovně neupraví. Každá sada má vlastní synchronizované losování a reset. Administrátorské přihlášení platí pro všechny sady.
