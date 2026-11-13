@@ -24,14 +24,14 @@ function colourText(hex){
 }
 let state={people:[],winners:[],revision:0},rotation=0,busy=false,auth='',audio,on=true,lastTick=-1;
 const canvas=$('wheel'),ctx=canvas.getContext('2d');
-async function api(path,data){const res=await fetch('/api/'+path,{method:data?'POST':'GET',headers:{'Content-Type':'application/json',...(auth?{Authorization:auth}:{})},...(data?{body:JSON.stringify({...data,revision:state.revision})}:{})});const result=await res.json();if(!res.ok)throw Error(result.error||'Server není dostupný.');return result}
+async function api(path,data){const res=await fetch('/api/'+path,{method:data?'POST':'GET',signal:AbortSignal.timeout(12000),headers:{'Content-Type':'application/json',...(auth?{Authorization:auth}:{})},...(data?{body:JSON.stringify({...data,revision:state.revision})}:{})});const result=await res.json();if(!res.ok)throw Error(result.error||'Server není dostupný.');return result}
 function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',6000)}
 function initials(name){return name.split(' ').map(s=>s[0]).slice(0,2).join('')}
 function personRow(p,i,won=false){const row=document.createElement('div');row.className='person'+(won?' won':'');const avatar=document.createElement('span');avatar.className='avatar';avatar.textContent=initials(p.name);const colour=personColour(p);avatar.style.setProperty('--avatar',colour);avatar.style.setProperty('--ink',colourText(colour));const name=document.createElement('span');name.className='person-name';name.textContent=p.name;row.append(avatar,name);return row}
-function render(){const won=new Set(state.winners.map(w=>w.id)),available=state.people.filter(p=>!won.has(p.id));$('won-count').textContent=state.winners.length;const currentPresenter=state.winners.at(-1);
+function render(){const won=new Set(state.winners.map(w=>w.id)),available=state.people.filter(p=>!won.has(p.id));const currentPresenter=state.winners.at(-1);
 $('current-presenter').textContent=currentPresenter?currentPresenter.name:'Ještě nebyl vybrán';
 $('current-presenter').classList.toggle('is-empty',!currentPresenter);
-$('history').replaceChildren();state.winners.slice().reverse().forEach((p,i)=>{const row=personRow(p,i);const n=document.createElement('span');n.className='number';n.textContent='#'+(state.winners.length-i);row.append(n);$('history').append(row)});if(!state.winners.length){const p=document.createElement('p');p.className='history-empty';p.textContent='První vítěz už čeká na svůj okamžik. Možná to budeš ty.';$('history').append(p)}const locked=Date.now()<(state.lockedUntil||0);
+const locked=Date.now()<(state.lockedUntil||0);
 $('spin').disabled=busy||!available.length||locked;
 $('spin').classList.toggle('is-spinning',busy);
 $('spin-label').textContent=busy||locked?'Level Up':!available.length&&state.people.length?'HOTOVO':'ROZTOČIT';
@@ -40,7 +40,7 @@ $('spin').setAttribute('aria-label',spinHint);$('spin').title=spinHint;$('status
 
 $('admin-list').replaceChildren();state.people.forEach((p,i)=>{const row=personRow(p,i,won.has(p.id)),button=document.createElement('button');button.textContent='×';button.setAttribute('aria-label','Odebrat '+p.name);button.disabled=busy;button.onclick=async()=>{try{state=await api('remove',{id:p.id});render()}catch(e){$('admin-error').textContent=e.message}};row.append(button);$('admin-list').append(row)});draw()}
 function draw(){const size=1200,c=600,r=598,n=state.people.length;ctx.clearRect(0,0,size,size);ctx.save();ctx.translate(c,c);ctx.rotate(rotation);const won=new Set(state.winners.map(w=>w.id));if(!n){ctx.fillStyle='#262a38';ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.fill();for(let i=0;i<12;i++){ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,i*TAU/12,(i+1)*TAU/12);ctx.fillStyle=i%2?'#303442':'#393746';ctx.fill()}}state.people.forEach((p,i)=>{const start=i*TAU/n- Math.PI/2,end=(i+1)*TAU/n-Math.PI/2;ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,start,end);ctx.closePath();ctx.fillStyle=won.has(p.id)?'#323541':personColour(p);ctx.fill();ctx.strokeStyle='#17192355';ctx.lineWidth=2;ctx.stroke();ctx.save();ctx.rotate((start+end)/2);ctx.fillStyle=won.has(p.id)?'#717582':colourText(personColour(p));ctx.textAlign='right';ctx.textBaseline='middle';const font=Math.max(11,Math.min(33,650/n));ctx.font=`650 ${font}px -apple-system, sans-serif`;let label=p.name;while(ctx.measureText(label).width>410&&label.length>3)label=label.slice(0,-2)+'…';ctx.fillText(label,535,0);ctx.restore()});ctx.restore()}
-function tone(freq,duration=.035,type='sine',volume=.07,delay=0){if(!on||!audio)return;const t=audio.currentTime+delay,o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(volume,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+duration)}
+function tone(freq,duration=.035,type='sine',volume=.07,delay=0){if(!on||!audio||audio.state!=='running')return;const t=audio.currentTime+delay,o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(volume,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+duration)}
 function tick(){const sector=Math.floor(rotation/(TAU/Math.max(1,state.people.length)));if(sector!==lastTick){lastTick=sector;tone(1100+Math.random()*200,.035,'triangle',.055)}}
 function animate(from,to,duration,easing){return new Promise(resolve=>{const start=performance.now();function frame(now){const p=Math.min(1,(now-start)/duration);rotation=from+(to-from)*easing(p);draw();tick();if(p<1)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)})}
 function suspensePause(duration){return new Promise(resolve=>setTimeout(resolve,duration))}
@@ -68,7 +68,10 @@ async function runDrawAnimation(start,index,count,dramatic){
 $('spin').onclick=async()=>{
  if(busy)return;busy=true;render();
  try{
-  audio??=new (window.AudioContext||window.webkitAudioContext)();await audio.resume();
+  try{
+   const Audio=window.AudioContext||window.webkitAudioContext;
+   if(Audio){audio??=new Audio();void audio.resume().catch(()=>{})}
+  }catch{/* Audio must never prevent a draw. */}
   const result=await api('spin',{}),index=state.people.findIndex(p=>p.id===result.winner.id),n=state.people.length;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   tone(110,.35,'triangle',.12);tone(165,.4,'triangle',.09,.15);tone(220,.5,'triangle',.07,.3);
@@ -96,25 +99,11 @@ $('reset').onclick=async()=>{
   message.textContent='';$('admin-error').textContent='Vrácení kolegů do hry se nepovedlo: '+e.message;
  }finally{button.disabled=false;button.textContent='↺ Vrátit všechny kolegy do hry'}
 };
-$('sound').onclick=()=>{on=!on;$('sound').setAttribute('aria-pressed',String(on));$('sound').innerHTML=on?'♫ <span>Zvuk zapnutý</span>':'♪ <span>Zvuk vypnutý</span>'};$('fullscreen').onclick=async()=>{cancelAutoFullscreen();try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch{toast('Prohlížeč nepodporuje režim celé obrazovky.')}};
-function cancelAutoFullscreen(){
- document.removeEventListener('click',autoFullscreenOnInteraction,true);
- document.removeEventListener('keydown',autoFullscreenOnInteraction,true);
-}
+$('sound').onclick=()=>{on=!on;$('sound').setAttribute('aria-pressed',String(on));$('sound').innerHTML=on?'♫ <span>Zvuk zapnutý</span>':'♪ <span>Zvuk vypnutý</span>'};$('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch{toast('Prohlížeč nepodporuje režim celé obrazovky.')}};
 async function enterAutoFullscreen(){
- if(document.fullscreenElement){cancelAutoFullscreen();return}
- if(!document.fullscreenEnabled||!document.documentElement.requestFullscreen){cancelAutoFullscreen();return}
- try{await document.documentElement.requestFullscreen();cancelAutoFullscreen()}catch{/* Browsers may require a click; keep the first-interaction fallback. */}
+ if(document.fullscreenElement||!document.fullscreenEnabled||!document.documentElement.requestFullscreen)return;
+ try{await document.documentElement.requestFullscreen()}catch{/* Standard browsers may refuse fullscreen without user activation. */}
 }
-function autoFullscreenOnInteraction(event){
- if(!event.isTrusted)return;
- if(event.type==='keydown'&&!['Enter',' '].includes(event.key))return;
- cancelAutoFullscreen();
- if(event.target.closest?.('#fullscreen'))return;
- void enterAutoFullscreen();
-}
-document.addEventListener('click',autoFullscreenOnInteraction,true);
-document.addEventListener('keydown',autoFullscreenOnInteraction,true);
 void enterAutoFullscreen();
 function confetti(){const el=$('confetti'),c=el.getContext('2d'),w=el.width=innerWidth*devicePixelRatio,h=el.height=innerHeight*devicePixelRatio,particles=Array.from({length:180},()=>({x:w/2,y:h*.4,vx:(Math.random()-.5)*24*devicePixelRatio,vy:(-Math.random()*17-3)*devicePixelRatio,size:(Math.random()*6+3)*devicePixelRatio,color:palette[Math.floor(Math.random()*8)],a:Math.random()*6}));const start=performance.now();let last=start;function frame(now){const dt=Math.min(2,(now-last)/16.67);last=now;c.clearRect(0,0,w,h);particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=.17*devicePixelRatio*dt;p.a+=.07*dt;c.save();c.translate(p.x,p.y);c.rotate(p.a);c.fillStyle=p.color;c.fillRect(-p.size/2,-p.size/2,p.size,p.size*.5);c.restore()});if(now-start<5500)requestAnimationFrame(frame);else c.clearRect(0,0,w,h)}requestAnimationFrame(frame)}
 async function refresh(){if(busy)return;try{state=await api('state');render()}catch(e){$('status').textContent='Spojení se serverem není dostupné.';$('spin').disabled=true}}refresh();setInterval(()=>{if(!document.hidden)refresh()},30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
