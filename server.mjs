@@ -62,7 +62,7 @@ export async function handler(req,res){
  next.lockedUntil=0;if(next.currentDraw)next.currentDraw.completedAt=Date.now();lockedUntil=0;await saveSet(next,state.revision);state=next;
  }else if(path==='/api/add'){
  const names=String(data.names||'').split(/\n/).map(n=>n.trim().replace(/\s+/g,' ')).filter(Boolean);
- if(!names.length||names.some(n=>n.length>80||!/^\p{L}[\p{L}\p{M}'’.-]*(?: [\p{L}\p{M}'’.-]+)+$/u.test(n)))return reply(400,{error:'Zadej jméno a příjmení, každého na samostatný řádek (max. 80 znaků).'});
+ if(!names.length||names.some(n=>n.length>80||!/^\p{L}[\p{L}\p{M}\p{N} '’.-]*$/u.test(n)))return reply(400,{error:'Zadej jméno nebo název na samostatný řádek (max. 80 znaků), použij písmena, čísla, mezery, tečky, pomlčky nebo apostrofy.'});
  for(const name of names)if(!next.people.some(p=>p.name.toLocaleLowerCase('cs')===name.toLocaleLowerCase('cs')))next.people.push({id:randomUUID(),name});
  if(next.people.length>300)return reply(400,{error:'Maximum je 300 účastníků.'});await saveSet(next,state.revision);state=next;
  }else if(path==='/api/remove'){next.people=next.people.filter(p=>p.id!==data.id);await saveSet(next,state.revision);state=next}
