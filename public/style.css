@@ -17,3 +17,12 @@ footer{margin-top:20px;padding-top:16px;padding-bottom:16px}
 @media(min-width:1100px){.intro{padding-right:360px}}
 @media(max-width:800px){header{padding-top:10px;padding-bottom:10px}main{padding-top:16px}.arena{margin-top:22px;gap:20px}.wheel-wrap{width:min(88vw,490px,max(160px,calc(100svh - 285px)))}.intro h1{font-size:clamp(26px,4.5vw,36px);letter-spacing:-1px}.intro p{font-size:11px}.hub{width:clamp(62px,15vw,95px);height:clamp(62px,15vw,95px)}.hub span{font-size:clamp(26px,7vw,40px)}.hub small{font-size:6px}}
 @media(max-height:650px){header{padding-top:6px;padding-bottom:6px}.intro h1{font-size:26px;margin:4px 0}.intro p{margin-top:4px}.arena{margin-top:20px}.wheel-base{height:12px;margin-top:5px}.hub{width:64px;height:64px;border-width:4px}.hub span{font-size:27px}.hub small{font-size:5px}.card{padding:16px}.participants{max-height:200px}.spin-controls{padding-top:12px}#spin{padding:12px 22px}}
+
+
+/* The introduction belongs to the sidebar, leaving the wheel unobstructed. */
+.arena{margin-top:12px}
+aside .intro{text-align:left;padding:0;margin:0 0 22px}
+aside .intro h1{font-size:clamp(24px,2.4vw,32px);line-height:1.15;letter-spacing:-1px;margin:0 0 10px}
+aside .intro p{font-size:12px;line-height:1.6;margin:0;color:var(--muted)}
+.wheel-wrap{width:min(100%,510px,max(160px,calc(100svh - 205px)))}
+@media(max-width:800px){aside .intro{grid-column:1/-1;margin:0 0 4px}.wheel-wrap{width:min(88vw,490px,max(160px,calc(100svh - 205px)))}}
