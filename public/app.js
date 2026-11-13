@@ -28,6 +28,29 @@ let clockOffset=0,bestClockRtt=Infinity,lastClockSync=0,sharedFrame=0,shownDrawI
 const serverNow=()=>Date.now()+clockOffset;
 let state={people:[],winners:[],revision:0},rotation=0,busy=false,auth='',audio,on=true,lastTick=-1;
 const canvas=$('wheel'),ctx=canvas.getContext('2d');
+const bulbs=[],lampColours=['#168CFF','#00CED1','#29E45A','#B951CC','#FF4B88','#FF8B30','#FFDD78','#21D7AC'];
+let lampFrame='';
+const lampLayer=document.createElement('div');lampLayer.className='bulb-ring';lampLayer.setAttribute('aria-hidden','true');
+for(let i=0;i<64;i++){
+ const lamp=document.createElement('span'),angle=i*TAU/64;
+ lamp.className='bulb';lamp.style.left=(50+49*Math.sin(angle))+'%';lamp.style.top=(50-49*Math.cos(angle))+'%';
+ lamp.style.setProperty('--lamp',lampColours[i%lampColours.length]);lampLayer.append(lamp);bulbs.push(lamp);
+}
+canvas.parentElement?.append(lampLayer);
+function updateBulbs(){
+ const plan=state.currentDraw,now=serverNow();
+ const flashing=!!plan&&!plan.completedAt&&now>=plan.startedAt&&now<plan.revealAt&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const step=flashing?Math.floor((now-plan.startedAt)/450):-1,key=(plan?.id||'idle')+':'+step;
+ if(key===lampFrame)return;lampFrame=key;
+ let seed=2166136261;for(const character of plan?.id||'idle')seed=Math.imul(seed^character.charCodeAt(0),16777619);
+ bulbs.forEach((lamp,i)=>{
+  let hash=(seed^Math.imul(i+1,374761393)^Math.imul(step+1,668265263))>>>0;
+  hash=Math.imul(hash^(hash>>>13),1274126177)>>>0;hash=(hash^(hash>>>16))>>>0;
+  const power=flashing?(hash%100<35?.18:.7+(hash%31)/30):.85;
+  lamp.style.opacity=String(Math.min(1,power));lamp.style.setProperty('--lamp-power',String(power));
+ });
+}
+
 async function api(path,data){
  const sent=Date.now();
  const res=await fetch('/api/'+path,{method:data?'POST':'GET',cache:'no-store',signal:AbortSignal.timeout(12000),headers:{'Content-Type':'application/json',...(auth?{Authorization:auth}:{})},...(data?{body:JSON.stringify({...data,revision:state.revision})}:{})});
@@ -53,7 +76,7 @@ const spinHint=busy||locked?'Probíhá losování.':!state.people.length?'Přide
 $('spin').setAttribute('aria-label',spinHint);$('spin').title=spinHint;$('status').textContent=spinHint;
 
 $('admin-list').replaceChildren();state.people.forEach((p,i)=>{const row=personRow(p,i,won.has(p.id)),button=document.createElement('button');button.textContent='×';button.setAttribute('aria-label','Odebrat '+p.name);button.disabled=busy;button.onclick=async()=>{try{applySnapshot(await api('remove',{id:p.id}))}catch(e){$('admin-error').textContent=e.message}};row.append(button);$('admin-list').append(row)});draw()}
-function draw(){const size=1200,c=600,r=598,n=state.people.length;ctx.clearRect(0,0,size,size);ctx.save();ctx.translate(c,c);ctx.rotate(rotation);const won=new Set(visibleWinners().map(w=>w.id));if(!n){ctx.fillStyle='#262a38';ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.fill();for(let i=0;i<12;i++){ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,i*TAU/12,(i+1)*TAU/12);ctx.fillStyle=i%2?'#303442':'#393746';ctx.fill()}}state.people.forEach((p,i)=>{const start=i*TAU/n- Math.PI/2,end=(i+1)*TAU/n-Math.PI/2;ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,start,end);ctx.closePath();ctx.fillStyle=won.has(p.id)?'#323541':personColour(p);ctx.fill();if(highlightedId){
+function draw(){updateBulbs();const size=1200,c=600,r=598,n=state.people.length;ctx.clearRect(0,0,size,size);ctx.save();ctx.translate(c,c);ctx.rotate(rotation);const won=new Set(visibleWinners().map(w=>w.id));if(!n){ctx.fillStyle='#262a38';ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.fill();for(let i=0;i<12;i++){ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,i*TAU/12,(i+1)*TAU/12);ctx.fillStyle=i%2?'#303442':'#393746';ctx.fill()}}state.people.forEach((p,i)=>{const start=i*TAU/n- Math.PI/2,end=(i+1)*TAU/n-Math.PI/2;ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,start,end);ctx.closePath();ctx.fillStyle=won.has(p.id)?'#323541':personColour(p);ctx.fill();if(highlightedId){
  ctx.save();
  if(p.id===highlightedId){
   ctx.fillStyle='#fff1bd';ctx.globalAlpha=.18+highlightPulse*.38;ctx.fill();ctx.globalAlpha=1;
