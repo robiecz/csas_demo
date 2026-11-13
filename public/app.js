@@ -22,6 +22,7 @@ function colourText(hex){
  const light=.2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2];
  return (light+.05)/.05>=1.05/(light+.05)?'#11141B':'#FFFFFF';
 }
+let unlockTimer,lastDrawId;
 let state={people:[],winners:[],revision:0},rotation=0,busy=false,auth='',audio,on=true,lastTick=-1;
 const canvas=$('wheel'),ctx=canvas.getContext('2d');
 async function api(path,data){const res=await fetch('/api/'+path,{method:data?'POST':'GET',signal:AbortSignal.timeout(12000),headers:{'Content-Type':'application/json',...(auth?{Authorization:auth}:{})},...(data?{body:JSON.stringify({...data,revision:state.revision})}:{})});const result=await res.json();if(!res.ok)throw Error(result.error||'Server není dostupný.');return result}
@@ -32,6 +33,8 @@ function render(){const won=new Set(state.winners.map(w=>w.id)),available=state.
 $('current-presenter').textContent=currentPresenter?currentPresenter.name:'Ještě nebyl vybrán';
 $('current-presenter').classList.toggle('is-empty',!currentPresenter);
 const locked=Date.now()<(state.lockedUntil||0);
+clearTimeout(unlockTimer);
+if(locked)unlockTimer=setTimeout(render,Math.min(2147483647,Math.max(0,state.lockedUntil-Date.now())+30));
 $('spin').disabled=busy||!available.length||locked;
 $('spin').classList.toggle('is-spinning',busy);
 $('spin-label').textContent=busy||locked?'Level Up':!available.length&&state.people.length?'HOTOVO':'ROZTOČIT';
@@ -77,15 +80,25 @@ $('spin').onclick=async()=>{
   tone(110,.35,'triangle',.12);tone(165,.4,'triangle',.09,.15);tone(220,.5,'triangle',.07,.3);
   if(reduced){rotation=(TAU-(index+.5)*TAU/n)%TAU;draw()}
   else await runDrawAnimation(rotation,index,n,result.dramatic);
-  state=result.state;render();$('winner-name').textContent=result.winner.name;$('winner-dialog').showModal();
+  lastDrawId=result.winner.id;state=result.state;render();$('winner-name').textContent=result.winner.name;$('winner-dialog').showModal();
   [523,659,784,1047,1319].forEach((f,i)=>tone(f,.65,'triangle',.12,i*.12));
   if(!reduced)confetti();
  }catch(e){toast(e.message);try{state=await api('state')}catch{}}
  finally{busy=false;render()}
 };
-$('continue').onclick=()=>{$('winner-dialog').close();render()};
+$('continue').onclick=async()=>{
+ const button=$('continue');if(button.disabled)return;
+ button.disabled=true;button.textContent='Připravuji další losování…';
+ try{
+  state=await api('complete',{winnerId:lastDrawId});
+  $('winner-dialog').close();render();
+ }catch(e){
+  toast('Další losování se nepodařilo připravit: '+e.message);
+  try{state=await api('state');render()}catch{}
+ }finally{button.disabled=false;button.textContent='Pokračovat v losování ↗'}
+};
 $('admin').onclick=()=>{if(busy)return;$('admin-error').textContent='';$('admin-dialog').showModal()};document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
-$('login-form').onsubmit=async e=>{e.preventDefault();try{auth='Basic '+btoa('admin:'+unescape(encodeURIComponent($('password').value)));await api('auth');$('password').value='';$('login-form').hidden=true;$('admin-panel').hidden=false;render()}catch(error){auth='';$('admin-error').textContent=error.message}};
+$('login-form').onsubmit=async e=>{e.preventDefault();try{auth='Basic '+btoa('admin:'+unescape(encodeURIComponent($('password').value)));await api('auth');auth='';$('password').value='';$('login-form').hidden=true;$('admin-panel').hidden=false;render()}catch(error){auth='';$('admin-error').textContent=error.message}};
 $('add-form').onsubmit=async e=>{e.preventDefault();try{state=await api('add',{names:$('names').value});$('names').value='';$('admin-error').textContent='';render()}catch(error){$('admin-error').textContent=error.message}};
 $('reset').onclick=async()=>{
  if(!confirm('Vrátit všechny kolegy do hry? Dosavadní výběry se vymažou a všichni budou znovu ve hře.'))return;
@@ -107,3 +120,7 @@ async function enterAutoFullscreen(){
 void enterAutoFullscreen();
 function confetti(){const el=$('confetti'),c=el.getContext('2d'),w=el.width=innerWidth*devicePixelRatio,h=el.height=innerHeight*devicePixelRatio,particles=Array.from({length:180},()=>({x:w/2,y:h*.4,vx:(Math.random()-.5)*24*devicePixelRatio,vy:(-Math.random()*17-3)*devicePixelRatio,size:(Math.random()*6+3)*devicePixelRatio,color:palette[Math.floor(Math.random()*8)],a:Math.random()*6}));const start=performance.now();let last=start;function frame(now){const dt=Math.min(2,(now-last)/16.67);last=now;c.clearRect(0,0,w,h);particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=.17*devicePixelRatio*dt;p.a+=.07*dt;c.save();c.translate(p.x,p.y);c.rotate(p.a);c.fillStyle=p.color;c.fillRect(-p.size/2,-p.size/2,p.size,p.size*.5);c.restore()});if(now-start<5500)requestAnimationFrame(frame);else c.clearRect(0,0,w,h)}requestAnimationFrame(frame)}
 async function refresh(){if(busy)return;try{state=await api('state');render()}catch(e){$('status').textContent='Spojení se serverem není dostupné.';$('spin').disabled=true}}refresh();setInterval(()=>{if(!document.hidden)refresh()},30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+
+// Restore the device's HttpOnly administrator session without storing the password in JavaScript.
+async function restoreAdminSession(){try{await api('auth');$('login-form').hidden=true;$('admin-panel').hidden=false}catch{}}
+void restoreAdminSession();
