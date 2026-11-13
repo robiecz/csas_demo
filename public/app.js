@@ -77,7 +77,7 @@ function setDrawFocus(active){
  const after=wheel.getBoundingClientRect();
  if(!after.width||!after.height)return;
  wheelPositionAnimation=wheel.animate([
-  {transformOrigin:'0 0',transform:`translate(${before.left-after.left}px,${before.top-after.top}px) scale(${before.width/after.width},${before.height/after.height})`},
+  {transformOrigin:'0 0',transform:`translate(${before.left-after.left}px,${before.top-after.top}px) scale(${before.width/after.width})`},
   {transformOrigin:'0 0',transform:'none'}
  ],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'});
 }
