@@ -262,3 +262,5 @@ html.draw-focus{overflow:hidden}
 /* Narrow the pointer by 35%, preserving its height and centered mounting. */
 .pointer{width:23.4px}
 .pointer svg{overflow:visible}
+
+.bulb-ring.celebrating .bulb{transition:opacity .18s ease,filter .18s ease}
