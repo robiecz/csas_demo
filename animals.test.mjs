@@ -10,14 +10,19 @@ test('zvířátka: jedna postavička, různé strany a činnosti, vypnutí a mob
  const detail={busy:true,enabled:true,plan:{id:'test-draw',startedAt:1000},offset:0};
  const kinds=new Set(),actions=new Set(),sides=new Set();
  for(let i=0;i<80;i++){
-  now=1000+i*6800;listener({detail});assert.equal(stage.hidden,false);
+  now=1000;const draw={...detail,plan:{...detail.plan,id:'draw-'+i}};listener({detail:draw});assert.equal(stage.hidden,false);
   assert.equal((stage.innerHTML.match(/<svg /g)||[]).length,1);
   const [,kind,action]=stage.innerHTML.match(/little-animal (dog|cat) action-(\w+)/);
   kinds.add(kind);actions.add(action);sides.add(stage.dataset.side);
   const left=parseFloat(stage.style.left),width=parseFloat(stage.style.width);
   assert.ok(left>=24&&left+width<=1896);
   assert.ok(left+width<580||left>1340,'postavička nezasahuje do kola');
-  const unchanged=stage.innerHTML;timer();assert.equal(stage.innerHTML,unchanged);
+  const unchanged=stage.innerHTML,position=[stage.style.left,stage.style.top,stage.style.width];
+  for(const elapsed of [250,6800,13600,30000,60000]){
+   now=1000+elapsed;timer();listener({detail:draw});
+   assert.equal(stage.innerHTML,unchanged,'stejné zvířátko po celou dobu točení');
+   assert.deepEqual([stage.style.left,stage.style.top,stage.style.width],position,'stále na stejném místě');
+  }
  }
  assert.equal(kinds.size,2);assert.equal(actions.size,6);assert.equal(sides.size,2);
  listener({detail:{...detail,enabled:false}});assert.equal(stage.hidden,true);
