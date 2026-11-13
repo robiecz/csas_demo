@@ -24,7 +24,7 @@ function rememberAdmin(req,res){
  res.setHeader('Set-Cookie',ADMIN_COOKIE+'='+expires+'.'+signSession(expires)+'; Max-Age='+ADMIN_AGE+'; Path=/; HttpOnly; SameSite=Strict'+(secure?'; Secure':''));
 }
 
-const assets={'/sets-ui.js':['sets-ui.js','text/javascript; charset=utf-8'],'/timeline.js':['timeline.js','text/javascript; charset=utf-8'],'/favicon.svg':['favicon.svg','image/svg+xml'],'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
+const assets={'/celebration-audio.js':['celebration-audio.js','text/javascript; charset=utf-8'],'/sets-ui.js':['sets-ui.js','text/javascript; charset=utf-8'],'/timeline.js':['timeline.js','text/javascript; charset=utf-8'],'/favicon.svg':['favicon.svg','image/svg+xml'],'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
 export async function handler(req,res){
  let selectedSet;
  const reply=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify({...data,...(data.people?{set:selectedSet}:{}),serverNow:Date.now()}))};
