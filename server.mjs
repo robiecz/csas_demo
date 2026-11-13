@@ -33,8 +33,8 @@ export async function handler(req,res){
  else if(path==='/api/reset'){next.winners=[];await save(next,state.revision);state=next}
  else if(path==='/api/spin'){
  const available=next.people.filter(p=>!next.winners.some(w=>w.id===p.id));if(!available.length)return reply(400,{error:'Všichni už vyhráli. Resetuj losování.'});
- const winner=available[randomInt(available.length)];const dramatic=available.length>1&&randomInt(100)<30;
- next.winners.push({...winner,at:new Date().toISOString()});next.lockedUntil=Date.now()+13500;lockedUntil=next.lockedUntil;await save(next,state.revision);state=next;
+ const winner=available[randomInt(available.length)];const dramatic=available.length>1&&randomInt(100)<45;
+ next.winners.push({...winner,at:new Date().toISOString()});next.lockedUntil=Date.now()+(dramatic?26000:18500);lockedUntil=next.lockedUntil;await save(next,state.revision);state=next;
  return reply(200,{state:{...state,lockedUntil},winner,dramatic});
  }else return reply(404,{error:'Nenalezeno.'});
  return reply(200,{...state,lockedUntil});
