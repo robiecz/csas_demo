@@ -28,6 +28,7 @@ let unlockTimer,lastDrawId,highlightedId=null,highlightPulse=0;
 let clockOffset=0,bestClockRtt=Infinity,lastClockSync=0,sharedFrame=0,shownDrawId=null,phaseKey='',requestingSpin=false,refreshing=false;
 const serverNow=()=>Date.now()+clockOffset;
 let state={people:[],winners:[],revision:0},rotation=0,busy=false,auth='',audio,on=true,lastTick=-1;
+let audioMaster,celebrationBuffer,celebrationLoading,celebrationSource;
 const canvas=$('wheel'),ctx=canvas.getContext('2d');
 const bulbs=[],lampColours=['#168CFF','#00CED1','#29E45A','#B951CC','#FF4B88','#FF8B30','#FFDD78','#21D7AC'];
 let lampFrame='';
@@ -114,15 +115,37 @@ function draw(){updateBulbs();const size=1200,c=600,r=598,n=state.people.length;
  }else{ctx.fillStyle='#080b13';ctx.globalAlpha=.42;ctx.fill()}
  ctx.restore();
 }ctx.strokeStyle='#ffffff28';ctx.lineWidth=2;ctx.stroke();ctx.save();ctx.rotate((start+end)/2);ctx.fillStyle='#FFFFFF';ctx.strokeStyle='rgba(8,12,23,.75)';ctx.lineWidth=3.5;ctx.lineJoin='round';ctx.shadowColor='rgba(0,0,0,.75)';ctx.shadowBlur=5;ctx.shadowOffsetY=2;ctx.textAlign='right';ctx.textBaseline='middle';const font=Math.max(11,Math.min(33,650/n));ctx.font=`650 ${font}px -apple-system, sans-serif`;let label=p.name;while(ctx.measureText(label).width>410&&label.length>3)label=label.slice(0,-2)+'…';ctx.strokeText(label,535,0);ctx.fillText(label,535,0);ctx.restore()});ctx.restore()}
-function tone(freq,duration=.035,type='sine',volume=.07,delay=0){if(!on||!audio||audio.state!=='running')return;const t=audio.currentTime+delay,o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(volume,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+duration)}
+function tone(freq,duration=.035,type='sine',volume=.07,delay=0){if(!on||!audio||audio.state!=='running')return;const t=audio.currentTime+delay,o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(volume,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(audioMaster||audio.destination);o.start(t);o.stop(t+duration)}
 function tick(){const sector=Math.floor(rotation/(TAU/Math.max(1,state.people.length)));if(sector!==lastTick){lastTick=sector;tone(1100+Math.random()*200,.035,'triangle',.055)}}
+function prepareCelebration(){
+ if(celebrationBuffer)return Promise.resolve(celebrationBuffer);
+ if(!celebrationLoading)celebrationLoading=import('/celebration-audio.js')
+  .then(module=>Uint8Array.from(atob(module.default.split(',')[1]),character=>character.charCodeAt(0)).buffer)
+  .then(bytes=>audio.decodeAudioData(bytes)).then(buffer=>(celebrationBuffer=buffer))
+  .catch(()=>{celebrationLoading=null;return null});
+ return celebrationLoading;
+}
+function stopCelebration(){if(celebrationSource){try{celebrationSource.stop()}catch{}celebrationSource=null}}
+function celebrateWinner(){
+ if(!on||!audio||audio.state!=='running')return;
+ stopCelebration();
+ // A rising major fanfare sits above the real applause and cheering.
+ [[523,0,.14],[659,.14,.14],[784,.28,.2],[1047,.52,.85],[1319,.52,.85],[1568,.52,.85]]
+  .forEach(([frequency,delay,duration])=>tone(frequency,duration,'triangle',.075,delay));
+ const play=buffer=>{
+  if(!buffer||!on||!$('winner-dialog').open||audio.state!=='running')return;
+  const source=audio.createBufferSource();source.buffer=buffer;source.connect(audioMaster||audio.destination);
+  celebrationSource=source;source.onended=()=>{source.disconnect();if(celebrationSource===source)celebrationSource=null};source.start();
+ };
+ if(celebrationBuffer)play(celebrationBuffer);else void prepareCelebration().then(play);
+}
 function unlockAudio(){
- try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){audio??=new Audio();void audio.resume().catch(()=>{})}}catch{}
+ try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){audio??=new Audio();if(!audioMaster){audioMaster=audio.createGain();audioMaster.connect(audio.destination)}audioMaster.gain.value=on?1:0;void audio.resume().catch(()=>{});void prepareCelebration()}}catch{}
 }
 function applySnapshot(next){
  if(next.revision<state.revision)return;
  state=next;if(state.set){document.title=state.set.name+' · DEMO kolo';const caption=document.getElementById('set-caption');if(caption)caption.remove();if(state.set.slug){const label=document.createElement('p');label.id='set-caption';label.className='caption';label.textContent=state.set.name;document.querySelector('.intro')?.prepend(label)}}cancelAnimationFrame(sharedFrame);phaseKey='';
- if(!state.currentDraw){busy=false;rotation=state.rotation||0;highlightedId=null;highlightPulse=0;shownDrawId=null;if($('winner-dialog').open)$('winner-dialog').close();render();return}
+ if(!state.currentDraw){busy=false;rotation=state.rotation||0;highlightedId=null;highlightPulse=0;shownDrawId=null;stopCelebration();if($('winner-dialog').open)$('winner-dialog').close();render();return}
  runSharedFrame();
 }
 function runSharedFrame(){
@@ -139,7 +162,7 @@ function runSharedFrame(){
   if(shownDrawId!==plan.id){
    shownDrawId=plan.id;const winner=state.winners.find(w=>w.id===plan.winnerId);
    if(winner){$('winner-name').textContent=winner.name;if(!$('winner-dialog').open)$('winner-dialog').showModal()}
-   if(serverNow()-plan.revealAt<5500){[523,659,784,1047,1319].forEach((f,i)=>tone(f,.65,'triangle',.12,i*.12));if(!matchMedia('(prefers-reduced-motion: reduce)').matches)confetti()}
+   if(serverNow()-plan.revealAt<5500){celebrateWinner();if(!matchMedia('(prefers-reduced-motion: reduce)').matches)confetti()}
   }
  }else if(view.phase==='complete'&&$('winner-dialog').open){$('winner-dialog').close()}
  if(busy)sharedFrame=requestAnimationFrame(runSharedFrame);
@@ -155,7 +178,7 @@ $('continue').onclick=async()=>{
  button.disabled=true;button.textContent='Připravuji další losování…';
  try{
   applySnapshot(await api('complete',{winnerId:lastDrawId}));
-  $('winner-dialog').close();render();
+  stopCelebration();$('winner-dialog').close();render();
  }catch(e){
   toast('Další losování se nepodařilo připravit: '+e.message);
   try{applySnapshot(await api('state'))}catch{}
@@ -176,7 +199,7 @@ $('reset').onclick=async()=>{
   message.textContent='';$('admin-error').textContent='Vrácení kolegů do hry se nepovedlo: '+e.message;
  }finally{button.disabled=false;button.textContent='↺ Vrátit všechny kolegy do hry'}
 };
-$('sound').onclick=()=>{on=!on;if(on)unlockAudio();$('sound').setAttribute('aria-pressed',String(on));$('sound').innerHTML=on?'♫ <span>Zvuk zapnutý</span>':'♪ <span>Zvuk vypnutý</span>'};$('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch{toast('Prohlížeč nepodporuje režim celé obrazovky.')}};
+$('sound').onclick=()=>{on=!on;if(on)unlockAudio();else{if(audioMaster)audioMaster.gain.value=0;stopCelebration()}$('sound').setAttribute('aria-pressed',String(on));$('sound').innerHTML=on?'♫ <span>Zvuk zapnutý</span>':'♪ <span>Zvuk vypnutý</span>'};$('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch{toast('Prohlížeč nepodporuje režim celé obrazovky.')}};
 async function enterAutoFullscreen(){
  if(document.fullscreenElement||!document.fullscreenEnabled||!document.documentElement.requestFullscreen)return;
  try{await document.documentElement.requestFullscreen()}catch{/* Standard browsers may refuse fullscreen without user activation. */}
