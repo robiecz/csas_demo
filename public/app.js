@@ -113,7 +113,7 @@ function sectorSurface(colour,radius){
  return surface;
 }
 function pointerDeflection(angle,speed,count){
- if(!count)return 0;
+ if(!count||Math.abs(speed)<.002)return 0;
  const sector=TAU/count,distance=Math.atan2(Math.sin(angle*count),Math.cos(angle*count))/count;
  const contact=Math.min(.05,sector*.32),direction=speed<-.002?-1:1,along=distance*direction;
  if(Math.abs(distance)<=contact)return direction*Math.sin((along+contact)/(2*contact)*Math.PI/2);
@@ -121,11 +121,18 @@ function pointerDeflection(angle,speed,count){
  const elapsed=(along-contact)/Math.abs(speed);
  return elapsed<.5?direction*Math.exp(-elapsed*11)*Math.cos(elapsed*26):0;
 }
+function pointerBendForDraw(plan,now,angle,count,reduced=false){
+ if(reduced||!plan||plan.completedAt||now<plan.startedAt||now>=plan.stoppedAt)return 0;
+ const a=sampleDraw(plan,now).angle,b=sampleDraw(plan,now-24).angle;
+ const speed=Math.atan2(Math.sin(a-b),Math.cos(a-b))/.024;
+ // Relax the rubber before highlighting the result. The resting tip must
+ // always coincide with the exact radial axis used to select the winner.
+ const t=Math.min(1,Math.max(0,(plan.stoppedAt-now)/180));
+ return pointerDeflection(angle,speed,count)*15*t*t*(3-2*t);
+}
 function updateRubberPointer(){
- const plan=state.currentDraw,now=serverNow();let speed=0;
- if(plan){const a=sampleDraw(plan,now).angle,b=sampleDraw(plan,now-24).angle;speed=Math.atan2(Math.sin(a-b),Math.cos(a-b))/.024}
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
- const bend=(reduced?0:pointerDeflection(rotation,speed,state.people.length))*15;
+ const bend=pointerBendForDraw(state.currentDraw,serverNow(),rotation,state.people.length,reduced);
  const tip=18+bend,control=18+bend*.48;
  // Only the flexible lower section bends; the top remains clamped in place.
  $('pointer-flex-face').setAttribute('d',`M1 1H35V18Q${control+9} 36 ${tip} 52Q${control-9} 36 1 18Z`);
