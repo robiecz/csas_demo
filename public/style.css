@@ -128,7 +128,7 @@ html.draw-focus{overflow:hidden}
 .draw-focus .wheel-halo{inset:-10%;background:radial-gradient(ellipse,#b9834330,transparent 65%)}
 
 /* Quiet companions are transparent SVGs, never a card over the wheel. */
-#animal-stage{position:fixed;z-index:12;pointer-events:none;filter:drop-shadow(0 10px 22px #0006);animation:animal-arrive .28s ease-out both}
+#animal-stage{position:fixed;z-index:12;pointer-events:none;filter:drop-shadow(0 10px 22px #0006);isolation:isolate}
 #animal-stage[hidden]{display:none}
 .little-animal{width:100%;height:auto;overflow:visible;--animal-loop:6.8s}
 .little-animal .animal-breathe{transform-origin:120px 190px;animation:animal-breathe 2.8s ease-in-out infinite}
@@ -180,4 +180,26 @@ html.draw-focus{overflow:hidden}
 @media(max-width:1099px){#animal-stage{display:none}}
 @media(prefers-reduced-motion:reduce){#animal-stage{display:none}}
 
+.little-animal [class^="animal-"]{animation-delay:var(--animal-delay,0s)}
+
+/* One visitor emerges from the dark and stays for the entire draw. */
+#animal-stage:before{content:'';position:absolute;z-index:-1;left:8%;right:8%;bottom:1%;height:24%;border-radius:50%;background:radial-gradient(ellipse,#03050c 10%,#060910b3 45%,transparent 72%);box-shadow:0 -8px 22px -18px #a7b3da66;animation:animal-burrow-open 1.4s ease-out both;animation-delay:var(--emerge-delay,0s)}
+.animal-reveal{overflow:hidden;mask-image:linear-gradient(to bottom,transparent,#000 8%,#000 88%,transparent 100%)}
+.animal-emerge{transform-origin:50% 92%;animation:animal-emerge 1.4s cubic-bezier(.18,.75,.3,1) both;animation-delay:var(--emerge-delay,0s)}
+.little-animal{filter:brightness(1.12) drop-shadow(0 0 2px #d5daf02a)}
+.little-animal .animal-breathe{animation-duration:2s}
+.action-sniff .animal-head{animation-duration:1.35s}
+.action-paw .animal-frontpaw{animation:animal-raised-paw 1.15s ease-in-out infinite}
+.action-paw .animal-tongue{transform-origin:100px 126px}
+.action-groom .animal-tongue{transform-origin:100px 126px}
+.action-wag .animal-tail{animation-name:animal-happy-tail}
+@keyframes animal-emerge{0%{opacity:0;transform:translateY(65%) scale(.72);filter:brightness(.15) blur(5px)}28%{opacity:.8;filter:brightness(.45) blur(1px)}72%{opacity:1;transform:translateY(-3%) scale(1.025);filter:brightness(1)}100%{opacity:1;transform:translateY(0) scale(1);filter:brightness(1)}}
+@keyframes animal-burrow-open{from{opacity:0;transform:scale(.35,.2)}to{opacity:1;transform:scale(1)}}
+@keyframes animal-breathe{50%{transform:translateY(-3px) scaleY(.975)}}
+@keyframes animal-nose{0%,100%{transform:translate(-12px,29px) rotate(-17deg)}50%{transform:translate(-26px,43px) rotate(-30deg)}}
+@keyframes animal-paw-lick{0%,100%{transform:translate(-2px,4px) rotate(-4deg)}50%{transform:translate(-12px,19px) rotate(-18deg)}}
+@keyframes animal-raised-paw{0%,100%{transform:translate(-13px,-43px) rotate(-20deg)}50%{transform:translate(-21px,-54px) rotate(-35deg)}}
+@keyframes animal-groom{0%,100%{transform:translate(44px,31px) rotate(55deg)}50%{transform:translate(59px,47px) rotate(78deg)}}
+@keyframes animal-happy-tail{0%,100%{transform:rotate(-23deg)}50%{transform:rotate(29deg)}}
+@keyframes animal-curious{0%,100%{transform:translateY(0) rotate(-15deg)}50%{transform:translateY(-5px) rotate(16deg)}}
 .little-animal [class^="animal-"]{animation-delay:var(--animal-delay,0s)}
