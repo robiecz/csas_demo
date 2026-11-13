@@ -42,15 +42,18 @@ canvas.parentElement?.append(lampLayer);
 setTimeout(()=>lampLayer.classList.toggle('welcome',false),3000);
 function updateBulbs(){
  const plan=state.currentDraw,now=serverNow();
- const flashing=!!plan&&!plan.completedAt&&now>=plan.startedAt&&now<plan.revealAt&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const celebrating=!!plan&&!plan.completedAt&&!reduced&&now>=plan.stoppedAt&&now<plan.revealAt+5000;
+ const flashing=!!plan&&!plan.completedAt&&now>=plan.startedAt&&now<plan.revealAt&&!reduced;
+ lampLayer.classList.toggle('celebrating',celebrating);
  if(flashing)lampLayer.classList.toggle('welcome',false);
- const step=flashing?Math.floor((now-plan.startedAt)/450):-1,key=(plan?.id||'idle')+':'+step;
+ const step=celebrating?Math.floor((now-plan.stoppedAt)/450):flashing?Math.floor((now-plan.startedAt)/450):-1,key=(plan?.id||'idle')+':'+(celebrating?'winner:':'spin:')+step;
  if(key===lampFrame)return;lampFrame=key;
  let seed=2166136261;for(const character of plan?.id||'idle')seed=Math.imul(seed^character.charCodeAt(0),16777619);
  bulbs.forEach((lamp,i)=>{
   let hash=(seed^Math.imul(i+1,374761393)^Math.imul(step+1,668265263))>>>0;
   hash=Math.imul(hash^(hash>>>13),1274126177)>>>0;hash=(hash^(hash>>>16))>>>0;
-  const power=flashing?(hash%100<35?.18:.7+(hash%31)/30):.85;
+  const power=celebrating?(step%4===0?1.8:(Math.floor(i/4)+step)%2?1.5:.25):flashing?(hash%100<35?.18:.7+(hash%31)/30):.85;
   lamp.style.opacity=String(Math.min(1,power));lamp.style.setProperty('--lamp-power',String(power));
  });
 }
@@ -230,7 +233,8 @@ function runSharedFrame(){
    if(serverNow()-plan.revealAt<5500){celebrateWinner();if(!matchMedia('(prefers-reduced-motion: reduce)').matches)confetti()}
   }
  }else if(view.phase==='complete'&&$('winner-dialog').open){$('winner-dialog').close()}
- if(busy)sharedFrame=requestAnimationFrame(runSharedFrame);
+ const lampCelebration=!plan.completedAt&&serverNow()>=plan.stoppedAt&&serverNow()<plan.revealAt+5000&&!reduced;
+ if(busy||lampCelebration)sharedFrame=requestAnimationFrame(runSharedFrame);
 }
 $('spin').onclick=async()=>{
  if(busy||requestingSpin)return;requestingSpin=true;busy=true;highlightedId=null;highlightPulse=0;render();unlockAudio();
