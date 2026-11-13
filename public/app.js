@@ -110,6 +110,48 @@ function sectorSurface(colour,radius){
  surface.addColorStop(1,shadeColour(colour,-.26));
  return surface;
 }
+// Rubber stops bend against the fixed pointer and recoil after clearing it.
+function rubberStopBend(angle,speed){
+ const wrapped=Math.atan2(Math.sin(angle),Math.cos(angle));
+ const direction=speed<-.002?-1:1,distance=wrapped*direction,contact=.042;
+ if(Math.abs(wrapped)<=contact){
+  const progress=(distance+contact)/(contact*2);
+  return -direction*Math.sin(progress*Math.PI*.5);
+ }
+ if(Math.abs(speed)<.002||distance<contact)return 0;
+ const sinceRelease=(distance-contact)/Math.abs(speed);
+ if(sinceRelease>.65)return 0;
+ return -direction*Math.exp(-sinceRelease*10)*Math.cos(sinceRelease*24);
+}
+function drawRubberStops(count){
+ if(!count)return;
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const plan=state.currentDraw,now=serverNow();
+ let speed=0;
+ if(plan&&!reduced){
+  const a=sampleDraw(plan,now).angle,b=sampleDraw(plan,now-32).angle;
+  speed=Math.atan2(Math.sin(a-b),Math.cos(a-b))/.032;
+ }
+ const halfWidth=Math.min(6,TAU/count*540*.23);
+ for(let i=0;i<count;i++){
+  const angle=i*TAU/count,bend=reduced?0:rubberStopBend(rotation+angle,speed);
+  const tip=bend*24;
+  ctx.save();ctx.rotate(angle);
+  // Recessed metal socket, flexible rubber body, and a small rounded highlight.
+  ctx.shadowColor='#0009';ctx.shadowBlur=5;ctx.shadowOffsetY=3;
+  ctx.fillStyle='#171c26';ctx.beginPath();ctx.ellipse(0,-539,halfWidth+4,5,0,0,TAU);ctx.fill();
+  ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  ctx.beginPath();ctx.moveTo(-halfWidth,-540);
+  ctx.bezierCurveTo(-halfWidth,-558,tip-halfWidth,-566,tip-halfWidth,-581);
+  ctx.quadraticCurveTo(tip,-588,tip+halfWidth,-581);
+  ctx.bezierCurveTo(tip+halfWidth,-566,halfWidth,-558,halfWidth,-540);ctx.closePath();
+  ctx.fillStyle='#77929f';ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle='#233441';ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-halfWidth*.4,-545);
+  ctx.bezierCurveTo(-halfWidth*.4,-560,tip-halfWidth*.35,-568,tip-halfWidth*.35,-579);
+  ctx.strokeStyle='#d8eaf1';ctx.lineWidth=Math.max(1,halfWidth*.4);ctx.lineCap='round';ctx.stroke();
+  ctx.restore();
+ }
+}
 function draw(){updateBulbs();const size=1200,c=600,r=598,n=state.people.length;ctx.clearRect(0,0,size,size);ctx.save();ctx.translate(c,c);ctx.rotate(rotation);const won=new Set(visibleWinners().map(w=>w.id));if(!n){ctx.fillStyle='#262a38';ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.fill();for(let i=0;i<12;i++){ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,i*TAU/12,(i+1)*TAU/12);ctx.fillStyle=i%2?'#303442':'#393746';ctx.fill()}}state.people.forEach((p,i)=>{const start=i*TAU/n- Math.PI/2,end=(i+1)*TAU/n-Math.PI/2;ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,start,end);ctx.closePath();ctx.fillStyle=sectorSurface(won.has(p.id)?'#323541':personColour(p),r);ctx.fill();if(highlightedId){
  ctx.save();
  if(p.id===highlightedId){
@@ -117,7 +159,7 @@ function draw(){updateBulbs();const size=1200,c=600,r=598,n=state.people.length;
   ctx.strokeStyle='#fff3c9';ctx.lineWidth=5+highlightPulse*6;ctx.shadowColor='#ffd389';ctx.shadowBlur=18+highlightPulse*42;ctx.stroke();
  }else{ctx.fillStyle='#080b13';ctx.globalAlpha=.42;ctx.fill()}
  ctx.restore();
-}ctx.strokeStyle='#ffffff28';ctx.lineWidth=2;ctx.stroke();ctx.save();ctx.rotate((start+end)/2);ctx.fillStyle='#FFFFFF';ctx.strokeStyle='rgba(8,12,23,.75)';ctx.lineWidth=3.5;ctx.lineJoin='round';ctx.shadowColor='rgba(0,0,0,.75)';ctx.shadowBlur=5;ctx.shadowOffsetY=2;ctx.textAlign='right';ctx.textBaseline='middle';const font=Math.max(11,Math.min(33,650/n));ctx.font=`650 ${font}px -apple-system, sans-serif`;let label=p.name;while(ctx.measureText(label).width>410&&label.length>3)label=label.slice(0,-2)+'…';ctx.strokeText(label,535,0);ctx.fillText(label,535,0);ctx.restore()});ctx.restore()}
+}ctx.strokeStyle='#ffffff28';ctx.lineWidth=2;ctx.stroke();ctx.save();ctx.rotate((start+end)/2);ctx.fillStyle='#FFFFFF';ctx.strokeStyle='rgba(8,12,23,.75)';ctx.lineWidth=3.5;ctx.lineJoin='round';ctx.shadowColor='rgba(0,0,0,.75)';ctx.shadowBlur=5;ctx.shadowOffsetY=2;ctx.textAlign='right';ctx.textBaseline='middle';const font=Math.max(11,Math.min(33,650/n));ctx.font=`650 ${font}px -apple-system, sans-serif`;let label=p.name;while(ctx.measureText(label).width>410&&label.length>3)label=label.slice(0,-2)+'…';ctx.strokeText(label,535,0);ctx.fillText(label,535,0);ctx.restore()});drawRubberStops(n);ctx.restore()}
 function tone(freq,duration=.035,type='sine',volume=.07,delay=0){if(!on||!audio||audio.state!=='running')return;const t=audio.currentTime+delay,o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(volume,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(audioMaster||audio.destination);o.start(t);o.stop(t+duration)}
 // Short slot-machine-style win cues follow the three sector flashes.
 let highlightSoundDrawId=null,highlightSoundCue=-1;
