@@ -37,7 +37,11 @@ test('autorizace, validace, losování, souběh, reset a persistence',async()=>{
   assert.equal((await request('/api/state',null,false)).data.currentDraw.animalKind,kind);
   previous=kind;const disk=JSON.parse(readFileSync(join(dir,'state.json')));disk.lockedUntil=0;writeFileSync(join(dir,'state.json'),JSON.stringify(disk));s=(await request('/api/state')).data;
  }
+ const beforeReset=structuredClone(s.people);
  s=(await request('/api/reset',{revision:s.revision})).data;assert.deepEqual(s.usedAnimalKinds,[]);assert.equal(s.lastAnimalKind,null);
+ assert.notDeepEqual(s.people.map(p=>p.id),beforeReset.map(p=>p.id),'reset přerozdělí jména na výseče');
+ assert.deepEqual([...s.people].sort((a,b)=>a.id.localeCompare(b.id)),beforeReset.sort((a,b)=>a.id.localeCompare(b.id)),'reset zachová identity i jména');
+ assert.deepEqual((await request('/api/state',null,false)).data.people,s.people,'nové pořadí je stejné pro všechny diváky');
  // Explicit reset starts a clean pool even when the last cycle was incomplete.
  s=(await request('/api/spin',{revision:s.revision})).data.state;
  {const disk=JSON.parse(readFileSync(join(dir,'state.json')));disk.lockedUntil=0;writeFileSync(join(dir,'state.json'),JSON.stringify(disk));}

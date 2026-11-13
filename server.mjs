@@ -70,7 +70,16 @@ export async function handler(req,res){
  for(const name of names)if(!next.people.some(p=>p.name.toLocaleLowerCase('cs')===name.toLocaleLowerCase('cs')))next.people.push({id:randomUUID(),name});
  if(next.people.length>300)return reply(400,{error:'Maximum je 300 účastníků.'});await saveSet(next,state.revision);state=next;
  }else if(path==='/api/remove'){next.people=next.people.filter(p=>p.id!==data.id);await saveSet(next,state.revision);state=next}
- else if(path==='/api/reset'){next.winners=[];next.currentDraw=null;next.rotation=0;next.usedAnimalKinds=[];next.lastAnimalKind=null;await saveSet(next,state.revision);state=next}
+ else if(path==='/api/reset'){
+ next.winners=[];next.currentDraw=null;next.rotation=0;next.usedAnimalKinds=[];next.lastAnimalKind=null;
+ if(next.people.length>1){
+  const before=next.people.map(person=>person.id);
+  // Uniform shuffle; reject the unchanged order so every reset visibly reassigns sectors.
+  do{for(let i=next.people.length-1;i>0;i--){const j=randomInt(i+1);[next.people[i],next.people[j]]=[next.people[j],next.people[i]]}}
+  while(next.people.every((person,i)=>person.id===before[i]));
+ }
+ await saveSet(next,state.revision);state=next;
+ }
  else if(path==='/api/spin'){
  const available=next.people.filter(p=>!next.winners.some(w=>w.id===p.id));if(!available.length)return reply(400,{error:'Všichni už vyhráli. Resetuj losování.'});
  // Fresh unbiased Fisher–Yates shuffle using OS-backed cryptographic randomness.
