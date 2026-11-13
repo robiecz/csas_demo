@@ -52,3 +52,12 @@ aside .intro{margin-bottom:28px}
 .history-card{border-top:1px solid var(--line);padding-top:24px}
 @media(max-width:800px){aside{display:block}aside .intro{margin-bottom:24px}.current-presenter{font-size:36px}}
 @media(max-width:480px){.brand{font-size:10px;gap:5px;letter-spacing:.7px}.brandmark{margin-right:3px}.current-presenter{font-size:32px}}
+
+/* Opaque hub in every interaction state; gentle Level Up pulse while drawing. */
+#spin.hub,#spin.hub:hover,#spin.hub:active,#spin.hub:disabled{background:#171923}
+#spin.hub.is-spinning,#spin.hub.is-spinning:hover{background:#12141c;opacity:1;border-color:#d7ad76;box-shadow:0 4px 18px #0008,0 0 0 4px #12141d,0 0 30px #ffad611a}
+#spin.hub.is-spinning .spin-icon{display:none}
+#spin.hub.is-spinning small{margin:0;font-size:18px;letter-spacing:-.5px;font-weight:750;line-height:1.1;animation:level-up-pulse 2.8s ease-in-out infinite}
+@keyframes level-up-pulse{0%,100%{opacity:.25;text-shadow:none}50%{opacity:1;text-shadow:0 0 18px #ffcf9166}}
+@media(max-width:480px),(max-height:650px){#spin.hub.is-spinning small{font-size:14px}}
+@media(prefers-reduced-motion:reduce){#spin.hub.is-spinning small{animation:none;opacity:1}}
