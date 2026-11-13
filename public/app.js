@@ -54,23 +54,24 @@ function tone(freq,duration=.035,type='sine',volume=.07,delay=0){if(!on||!audio|
 function tick(){const sector=Math.floor(rotation/(TAU/Math.max(1,state.people.length)));if(sector!==lastTick){lastTick=sector;tone(1100+Math.random()*200,.035,'triangle',.055)}}
 function animate(from,to,duration,easing){return new Promise(resolve=>{const start=performance.now();function frame(now){const p=Math.min(1,(now-start)/duration);rotation=from+(to-from)*easing(p);draw();tick();if(p<1)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)})}
 function suspensePause(duration){return new Promise(resolve=>setTimeout(resolve,duration))}
-async function runDrawAnimation(start,index,count,dramatic){
+async function runDrawAnimation(start,index,count,dramatic,motion={}){
+ const settings={launchTurns:1.5,cruiseTurns:5.5,coastTurns:7,launchMs:1600,cruiseMs:2200,slowMs:10400,pauseMs:850,extraTurns:1,extraMs:6200,nearSectors:.85,...motion};
  const sector=TAU/count,finalAngle=(TAU-(index+.5)*sector)%TAU;
- const launch=start+TAU*1.5;
- await animate(start,launch,1600,p=>p*p);
- const cruise=launch+TAU*5.5;
- await animate(launch,cruise,2200,p=>p);
- const landing=cruise+TAU*7+((finalAngle-cruise%TAU+TAU)%TAU);
+ const launch=start+TAU*settings.launchTurns;
+ await animate(start,launch,settings.launchMs,p=>p*p);
+ const cruise=launch+TAU*settings.cruiseTurns;
+ await animate(launch,cruise,settings.cruiseMs,p=>p);
+ const landing=cruise+TAU*settings.coastTurns+((finalAngle-cruise%TAU+TAU)%TAU);
  if(dramatic){
-  const near=landing-sector*.85;
-  await animate(cruise,near,10400,p=>1-Math.pow(1-p,3.6));
+  const near=landing-sector*settings.nearSectors;
+  await animate(cruise,near,settings.slowMs,p=>1-Math.pow(1-p,3.6));
   $('status').textContent='Ještě chvilku…';
   tone(62,.22,'sine',.16);tone(74,.22,'sine',.13,.48);
-  await suspensePause(850);
+  await suspensePause(settings.pauseMs);
   tone(110,.4,'triangle',.1);tone(165,.6,'triangle',.08,.15);
-  await animate(near,landing+TAU,6200,p=>1-Math.pow(1-p,3));
+  await animate(near,landing+TAU*settings.extraTurns,settings.extraMs,p=>1-Math.pow(1-p,3));
  }else{
-  await animate(cruise,landing,10400,p=>1-Math.pow(1-p,3.6));
+  await animate(cruise,landing,settings.slowMs,p=>1-Math.pow(1-p,3.6));
  }
  rotation=((rotation%TAU)+TAU)%TAU;draw();
 }
@@ -99,7 +100,7 @@ $('spin').onclick=async()=>{
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   tone(110,.35,'triangle',.12);tone(165,.4,'triangle',.09,.15);tone(220,.5,'triangle',.07,.3);
   if(reduced){rotation=(TAU-(index+.5)*TAU/n)%TAU;draw()}
-  else await runDrawAnimation(rotation,index,n,result.dramatic);
+  else await runDrawAnimation(rotation,index,n,result.dramatic,result.motion);
   await illuminateWinner(result.winner.id,reduced?0:2700);
   lastDrawId=result.winner.id;state=result.state;render();$('winner-name').textContent=result.winner.name;$('winner-dialog').showModal();
   [523,659,784,1047,1319].forEach((f,i)=>tone(f,.65,'triangle',.12,i*.12));
