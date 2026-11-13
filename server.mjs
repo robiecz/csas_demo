@@ -16,7 +16,7 @@ export async function handler(req,res){
  if(!password)return reply(503,{error:'Administrace zatím nemá nastavené heslo.'});
  let state=await load();let lockedUntil=state.lockedUntil||0;
  if(req.method==='GET'&&path==='/api/state')return reply(200,{...state,lockedUntil});
- if(!authorized(req))return reply(401,{error:'Nesprávné heslo administrátora.'});
+ if(!(req.method==='POST'&&path==='/api/spin')&&!authorized(req))return reply(401,{error:'Nesprávné heslo administrátora.'});
  if(req.method==='GET'&&path==='/api/auth')return reply(200,{ok:true});
  if(req.method!=='POST')return reply(405,{error:'Nepodporovaná metoda.'});
  if(req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`&&req.headers.origin!==`https://${req.headers.host}`)return reply(403,{error:'Neplatný původ požadavku.'});
