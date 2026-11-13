@@ -60,6 +60,25 @@ $('reset').onclick=async()=>{
   message.textContent='';$('admin-error').textContent='Vrácení kolegů do hry se nepovedlo: '+e.message;
  }finally{button.disabled=false;button.textContent='↺ Vrátit všechny kolegy do hry'}
 };
-$('sound').onclick=()=>{on=!on;$('sound').setAttribute('aria-pressed',String(on));$('sound').innerHTML=on?'♫ <span>Zvuk zapnutý</span>':'♪ <span>Zvuk vypnutý</span>'};$('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch{toast('Prohlížeč nepodporuje režim celé obrazovky.')}};
+$('sound').onclick=()=>{on=!on;$('sound').setAttribute('aria-pressed',String(on));$('sound').innerHTML=on?'♫ <span>Zvuk zapnutý</span>':'♪ <span>Zvuk vypnutý</span>'};$('fullscreen').onclick=async()=>{cancelAutoFullscreen();try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch{toast('Prohlížeč nepodporuje režim celé obrazovky.')}};
+function cancelAutoFullscreen(){
+ document.removeEventListener('click',autoFullscreenOnInteraction,true);
+ document.removeEventListener('keydown',autoFullscreenOnInteraction,true);
+}
+async function enterAutoFullscreen(){
+ if(document.fullscreenElement){cancelAutoFullscreen();return}
+ if(!document.fullscreenEnabled||!document.documentElement.requestFullscreen){cancelAutoFullscreen();return}
+ try{await document.documentElement.requestFullscreen();cancelAutoFullscreen()}catch{/* Browsers may require a click; keep the first-interaction fallback. */}
+}
+function autoFullscreenOnInteraction(event){
+ if(!event.isTrusted)return;
+ if(event.type==='keydown'&&!['Enter',' '].includes(event.key))return;
+ cancelAutoFullscreen();
+ if(event.target.closest?.('#fullscreen'))return;
+ void enterAutoFullscreen();
+}
+document.addEventListener('click',autoFullscreenOnInteraction,true);
+document.addEventListener('keydown',autoFullscreenOnInteraction,true);
+void enterAutoFullscreen();
 function confetti(){const el=$('confetti'),c=el.getContext('2d'),w=el.width=innerWidth*devicePixelRatio,h=el.height=innerHeight*devicePixelRatio,particles=Array.from({length:180},()=>({x:w/2,y:h*.4,vx:(Math.random()-.5)*24*devicePixelRatio,vy:(-Math.random()*17-3)*devicePixelRatio,size:(Math.random()*6+3)*devicePixelRatio,color:palette[Math.floor(Math.random()*8)],a:Math.random()*6}));const start=performance.now();let last=start;function frame(now){const dt=Math.min(2,(now-last)/16.67);last=now;c.clearRect(0,0,w,h);particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=.17*devicePixelRatio*dt;p.a+=.07*dt;c.save();c.translate(p.x,p.y);c.rotate(p.a);c.fillStyle=p.color;c.fillRect(-p.size/2,-p.size/2,p.size,p.size*.5);c.restore()});if(now-start<5500)requestAnimationFrame(frame);else c.clearRect(0,0,w,h)}requestAnimationFrame(frame)}
 async function refresh(){if(busy)return;try{state=await api('state');render()}catch(e){$('status').textContent='Spojení se serverem není dostupné.';$('spin').disabled=true}}refresh();setInterval(()=>{if(!document.hidden)refresh()},30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
