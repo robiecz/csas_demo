@@ -41,3 +41,6 @@ body{padding-bottom:0}
 @keyframes hub-turn{to{transform:rotate(360deg)}}
 @media(max-width:800px){.wheel-wrap{width:min(88vw,490px,max(160px,calc(100svh - 145px)))}}
 @media(max-width:480px),(max-height:650px){#spin.hub{width:78px;height:78px;border-width:5px}#spin.hub .spin-icon{font-size:40px}#spin.hub small{font-size:6px;margin-top:6px}}
+
+/* Hide the central arrow while a draw is in progress. */
+#spin.hub.is-spinning .spin-icon{visibility:hidden;animation:none}
