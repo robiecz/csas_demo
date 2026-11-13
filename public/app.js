@@ -32,16 +32,18 @@ let audioMaster,celebrationBuffer,celebrationLoading,celebrationSource;
 const canvas=$('wheel'),ctx=canvas.getContext('2d');
 const bulbs=[],lampColours=['#168CFF','#00CED1','#29E45A','#B951CC','#FF4B88','#FF8B30','#FFDD78','#21D7AC'];
 let lampFrame='';
-const lampLayer=document.createElement('div');lampLayer.className='bulb-ring';lampLayer.setAttribute('aria-hidden','true');
+const lampLayer=document.createElement('div');lampLayer.className='bulb-ring welcome';lampLayer.setAttribute('aria-hidden','true');
 for(let i=0;i<64;i++){
  const lamp=document.createElement('span'),angle=i*TAU/64;
  lamp.className='bulb';lamp.style.left=(50+49*Math.sin(angle))+'%';lamp.style.top=(50-49*Math.cos(angle))+'%';
  lamp.style.setProperty('--lamp',lampColours[i%lampColours.length]);lampLayer.append(lamp);bulbs.push(lamp);
 }
 canvas.parentElement?.append(lampLayer);
+setTimeout(()=>lampLayer.classList.toggle('welcome',false),3000);
 function updateBulbs(){
  const plan=state.currentDraw,now=serverNow();
  const flashing=!!plan&&!plan.completedAt&&now>=plan.startedAt&&now<plan.revealAt&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+ if(flashing)lampLayer.classList.toggle('welcome',false);
  const step=flashing?Math.floor((now-plan.startedAt)/450):-1,key=(plan?.id||'idle')+':'+step;
  if(key===lampFrame)return;lampFrame=key;
  let seed=2166136261;for(const character of plan?.id||'idle')seed=Math.imul(seed^character.charCodeAt(0),16777619);
@@ -144,12 +146,13 @@ function playHighlightSound(plan,now){
  if(cue<=highlightSoundCue)return;highlightSoundCue=cue;
  // A late spectator hears upcoming flashes, never a backlog of missed sounds.
  if(!on||!audio||audio.state!=='running'||elapsed-moments[cue]>180)return;
- if(cue===0){[1047,1319,1568,2093].forEach((freq,i)=>tone(freq,.12,'triangle',.045,i*.065));return}
- const root=[0,1047,1319,1568][cue];
- tone(root,.30,'sine',.095);
- tone(root*2,.22,'sine',.035,.015);
- tone(root*1.5,.18,'triangle',.035,.07);
- tone(root*2,.16,'sine',.03,.14);
+ if(cue===0){[523,659,784,1047,1319,1568].forEach((freq,i)=>tone(freq,.20,'triangle',.065,i*.045));return}
+ const chord=[[523,659,784],[659,784,1047],[784,1047,1319]][cue-1];
+ // Rising major-chord inversions, a warm bass and sparkling bell accents.
+ tone(131,.38,'triangle',.065);
+ chord.forEach((freq,i)=>tone(freq,.40-i*.025,'triangle',.065,i*.018));
+ tone(chord[2]*2,.20,'sine',.055,.12);
+ tone(chord[2]*3,.16,'sine',.03,.22);
 }
 function tick(){const sector=Math.floor(rotation/(TAU/Math.max(1,state.people.length)));if(sector!==lastTick){lastTick=sector;tone(1100+Math.random()*200,.035,'triangle',.055)}}
 function prepareCelebration(){
