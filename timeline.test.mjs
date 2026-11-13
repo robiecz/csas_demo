@@ -19,3 +19,23 @@ test('pozdější divák vidí ve stejném čase stejnou fázi i úhel',()=>{
  }
 });
 
+
+test('mezizastavení je nezávislé na výherci a dotočení jde vždy vpřed',()=>{
+ const count=13;
+ const sector=angle=>Math.floor((((TAU-angle)%TAU+TAU)%TAU)/(TAU/count));
+ for(let winnerIndex=0;winnerIndex<count;winnerIndex++){
+  const stops=new Set();
+  for(let teaseIndex=0;teaseIndex<count;teaseIndex++){
+   if(teaseIndex===winnerIndex)continue;
+   for(const teaseOffset of [-.2,0,.2]){
+    const plan=createDrawPlan({id:'independent',winnerId:'winner',winnerIndex,count,startRotation:1.7,startedAt:1000,dramatic:true,motion:{...motion,teaseIndex,teaseOffset}});
+    const pause=plan.phases.find(p=>p.kind==='pause');
+    assert.equal(sector(pause.to),teaseIndex);stops.add(sector(pause.to));
+    assert.equal(sector(plan.endRotation),winnerIndex);
+    for(const phase of plan.phases)assert.ok(phase.to>=phase.from);
+    assert.deepEqual(sampleDraw(plan,plan.startedAt+pause.start+10),sampleDraw(JSON.parse(JSON.stringify(plan)),plan.startedAt+pause.start+10));
+   }
+  }
+  assert.equal(stops.size,count-1);
+ }
+});
