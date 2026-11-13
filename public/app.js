@@ -110,6 +110,20 @@ function sectorSurface(colour,radius){
  surface.addColorStop(1,shadeColour(colour,-.26));
  return surface;
 }
+function drawRimStuds(count){
+ if(!count)return;
+ const radius=Math.min(8,TAU/count*573*.22);
+ for(let i=0;i<count;i++){
+  const angle=i*TAU/count-Math.PI/2,x=Math.cos(angle)*573,y=Math.sin(angle)*573;
+  ctx.save();ctx.shadowColor='#000b';ctx.shadowBlur=4;ctx.shadowOffsetY=2;
+  ctx.beginPath();ctx.arc(x,y,radius+2,0,TAU);ctx.fillStyle='#121922';ctx.fill();
+  ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  const cap=ctx.createRadialGradient(x-radius*.3,y-radius*.35,.1,x,y,radius);
+  cap.addColorStop(0,'#b2c0cb');cap.addColorStop(.35,'#637684');cap.addColorStop(1,'#283640');
+  ctx.beginPath();ctx.arc(x,y,radius,0,TAU);ctx.fillStyle=cap;ctx.fill();
+  ctx.lineWidth=1;ctx.strokeStyle='#dbe8ef66';ctx.stroke();ctx.restore();
+ }
+}
 function draw(){updateBulbs();const size=1200,c=600,r=598,n=state.people.length;ctx.clearRect(0,0,size,size);ctx.save();ctx.translate(c,c);ctx.rotate(rotation);const won=new Set(visibleWinners().map(w=>w.id));if(!n){ctx.fillStyle='#262a38';ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.fill();for(let i=0;i<12;i++){ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,i*TAU/12,(i+1)*TAU/12);ctx.fillStyle=i%2?'#303442':'#393746';ctx.fill()}}state.people.forEach((p,i)=>{const start=i*TAU/n- Math.PI/2,end=(i+1)*TAU/n-Math.PI/2;ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,start,end);ctx.closePath();ctx.fillStyle=sectorSurface(won.has(p.id)?'#323541':personColour(p),r);ctx.fill();if(highlightedId){
  ctx.save();
  if(p.id===highlightedId){
@@ -117,7 +131,7 @@ function draw(){updateBulbs();const size=1200,c=600,r=598,n=state.people.length;
   ctx.strokeStyle='#fff3c9';ctx.lineWidth=5+highlightPulse*6;ctx.shadowColor='#ffd389';ctx.shadowBlur=18+highlightPulse*42;ctx.stroke();
  }else{ctx.fillStyle='#080b13';ctx.globalAlpha=.42;ctx.fill()}
  ctx.restore();
-}ctx.strokeStyle='#ffffff28';ctx.lineWidth=2;ctx.stroke();ctx.save();ctx.rotate((start+end)/2);ctx.fillStyle='#FFFFFF';ctx.strokeStyle='rgba(8,12,23,.75)';ctx.lineWidth=3.5;ctx.lineJoin='round';ctx.shadowColor='rgba(0,0,0,.75)';ctx.shadowBlur=5;ctx.shadowOffsetY=2;ctx.textAlign='right';ctx.textBaseline='middle';const font=Math.max(11,Math.min(33,650/n));ctx.font=`650 ${font}px -apple-system, sans-serif`;let label=p.name;while(ctx.measureText(label).width>410&&label.length>3)label=label.slice(0,-2)+'…';ctx.strokeText(label,535,0);ctx.fillText(label,535,0);ctx.restore()});ctx.restore()}
+}ctx.strokeStyle='#ffffff28';ctx.lineWidth=2;ctx.stroke();ctx.save();ctx.rotate((start+end)/2);ctx.fillStyle='#FFFFFF';ctx.strokeStyle='rgba(8,12,23,.75)';ctx.lineWidth=3.5;ctx.lineJoin='round';ctx.shadowColor='rgba(0,0,0,.75)';ctx.shadowBlur=5;ctx.shadowOffsetY=2;ctx.textAlign='right';ctx.textBaseline='middle';const font=Math.max(11,Math.min(33,650/n));ctx.font=`650 ${font}px -apple-system, sans-serif`;let label=p.name;while(ctx.measureText(label).width>410&&label.length>3)label=label.slice(0,-2)+'…';ctx.strokeText(label,535,0);ctx.fillText(label,535,0);ctx.restore()});drawRimStuds(n);ctx.restore()}
 function tone(freq,duration=.035,type='sine',volume=.07,delay=0){if(!on||!audio||audio.state!=='running')return;const t=audio.currentTime+delay,o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(volume,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(audioMaster||audio.destination);o.start(t);o.stop(t+duration)}
 // Short slot-machine-style win cues follow the three sector flashes.
 let highlightSoundDrawId=null,highlightSoundCue=-1;
@@ -150,7 +164,7 @@ function stopCelebration(){if(celebrationSource){try{celebrationSource.stop()}ca
 function celebrateWinner(){
  if(!on||!audio||audio.state!=='running')return;
  stopCelebration();
- // A rising major fanfare sits above the real applause and cheering.
+ // A rising major fanfare sits above the voice-free stereo hall applause.
  [[523,0,.14],[659,.14,.14],[784,.28,.2],[1047,.52,.85],[1319,.52,.85],[1568,.52,.85]]
   .forEach(([frequency,delay,duration])=>tone(frequency,duration,'triangle',.075,delay));
  const play=buffer=>{
