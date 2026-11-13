@@ -34,7 +34,7 @@ $('current-presenter').classList.toggle('is-empty',!currentPresenter);
 $('history').replaceChildren();state.winners.slice().reverse().forEach((p,i)=>{const row=personRow(p,i);const n=document.createElement('span');n.className='number';n.textContent='#'+(state.winners.length-i);row.append(n);$('history').append(row)});if(!state.winners.length){const p=document.createElement('p');p.className='history-empty';p.textContent='První vítěz už čeká na svůj okamžik. Možná to budeš ty.';$('history').append(p)}const locked=Date.now()<(state.lockedUntil||0);
 $('spin').disabled=busy||!available.length||locked;
 $('spin').classList.toggle('is-spinning',busy);
-$('spin-label').textContent=busy||locked?'LOSUJI…':!available.length&&state.people.length?'HOTOVO':'ROZTOČIT';
+$('spin-label').textContent=busy||locked?'Level Up':!available.length&&state.people.length?'HOTOVO':'ROZTOČIT';
 const spinHint=busy||locked?'Probíhá losování.':!state.people.length?'Přidej účastníky v administraci.':!available.length?'Všichni již byli vybráni. Vrať kolegy do hry v administraci.':'Roztočit kolo';
 $('spin').setAttribute('aria-label',spinHint);$('spin').title=spinHint;$('status').textContent=spinHint;
 
@@ -43,7 +43,43 @@ function draw(){const size=1200,c=600,r=598,n=state.people.length;ctx.clearRect(
 function tone(freq,duration=.035,type='sine',volume=.07,delay=0){if(!on||!audio)return;const t=audio.currentTime+delay,o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(volume,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+duration)}
 function tick(){const sector=Math.floor(rotation/(TAU/Math.max(1,state.people.length)));if(sector!==lastTick){lastTick=sector;tone(1100+Math.random()*200,.035,'triangle',.055)}}
 function animate(from,to,duration,easing){return new Promise(resolve=>{const start=performance.now();function frame(now){const p=Math.min(1,(now-start)/duration);rotation=from+(to-from)*easing(p);draw();tick();if(p<1)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)})}
-$('spin').onclick=async()=>{if(busy)return;busy=true;render();try{audio??=new (window.AudioContext||window.webkitAudioContext)();await audio.resume();const result=await api('spin',{}),index=state.people.findIndex(p=>p.id===result.winner.id),n=state.people.length;const finalAngle=(TAU-(index+.5)*TAU/n)%TAU;const end=rotation+TAU*6+((finalAngle-rotation%TAU+TAU)%TAU);const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;if(reduced){rotation=end;draw()}else if(result.dramatic){const near=end-TAU/n*.7;await animate(rotation,near,7800,p=>1-Math.pow(1-p,4));$('status').textContent='Ještě není rozhodnuto…';await animate(near,end,2300,p=>p*p*(3-2*p))}else await animate(rotation,end,9000,p=>1-Math.pow(1-p,4));state=result.state;render();$('winner-name').textContent=result.winner.name;$('winner-dialog').showModal();[523,659,784,1047,1319].forEach((f,i)=>tone(f,.65,'triangle',.12,i*.12));if(!reduced)confetti();}catch(e){toast(e.message);try{state=await api('state')}catch{}}finally{busy=false;render()}};
+function suspensePause(duration){return new Promise(resolve=>setTimeout(resolve,duration))}
+async function runDrawAnimation(start,index,count,dramatic){
+ const sector=TAU/count,finalAngle=(TAU-(index+.5)*sector)%TAU;
+ const launch=start+TAU*1.5;
+ await animate(start,launch,1600,p=>p*p);
+ const cruise=launch+TAU*5.5;
+ await animate(launch,cruise,2200,p=>p);
+ const landing=cruise+TAU*7+((finalAngle-cruise%TAU+TAU)%TAU);
+ if(dramatic){
+  const near=landing-sector*.85;
+  await animate(cruise,near,10400,p=>1-Math.pow(1-p,3.6));
+  $('status').textContent='Ještě chvilku…';
+  tone(62,.22,'sine',.16);tone(74,.22,'sine',.13,.48);
+  await suspensePause(850);
+  tone(110,.4,'triangle',.1);tone(165,.6,'triangle',.08,.15);
+  await animate(near,landing+TAU,6200,p=>1-Math.pow(1-p,3));
+ }else{
+  await animate(cruise,landing,10400,p=>1-Math.pow(1-p,3.6));
+ }
+ await suspensePause(1100);
+ rotation=((rotation%TAU)+TAU)%TAU;draw();
+}
+$('spin').onclick=async()=>{
+ if(busy)return;busy=true;render();
+ try{
+  audio??=new (window.AudioContext||window.webkitAudioContext)();await audio.resume();
+  const result=await api('spin',{}),index=state.people.findIndex(p=>p.id===result.winner.id),n=state.people.length;
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  tone(110,.35,'triangle',.12);tone(165,.4,'triangle',.09,.15);tone(220,.5,'triangle',.07,.3);
+  if(reduced){rotation=(TAU-(index+.5)*TAU/n)%TAU;draw()}
+  else await runDrawAnimation(rotation,index,n,result.dramatic);
+  state=result.state;render();$('winner-name').textContent=result.winner.name;$('winner-dialog').showModal();
+  [523,659,784,1047,1319].forEach((f,i)=>tone(f,.65,'triangle',.12,i*.12));
+  if(!reduced)confetti();
+ }catch(e){toast(e.message);try{state=await api('state')}catch{}}
+ finally{busy=false;render()}
+};
 $('continue').onclick=()=>{$('winner-dialog').close();render()};
 $('admin').onclick=()=>{if(busy)return;$('admin-error').textContent='';$('admin-dialog').showModal()};document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
 $('login-form').onsubmit=async e=>{e.preventDefault();try{auth='Basic '+btoa('admin:'+unescape(encodeURIComponent($('password').value)));await api('auth');$('password').value='';$('login-form').hidden=true;$('admin-panel').hidden=false;render()}catch(error){auth='';$('admin-error').textContent=error.message}};
