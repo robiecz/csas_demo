@@ -112,6 +112,25 @@ function sectorSurface(colour,radius){
  surface.addColorStop(1,shadeColour(colour,-.26));
  return surface;
 }
+function pointerDeflection(angle,speed,count){
+ if(!count)return 0;
+ const sector=TAU/count,distance=Math.atan2(Math.sin(angle*count),Math.cos(angle*count))/count;
+ const contact=Math.min(.05,sector*.32),direction=speed<-.002?-1:1,along=distance*direction;
+ if(Math.abs(distance)<=contact)return direction*Math.sin((along+contact)/(2*contact)*Math.PI/2);
+ if(Math.abs(speed)<.002||along<contact)return 0;
+ const elapsed=(along-contact)/Math.abs(speed);
+ return elapsed<.5?direction*Math.exp(-elapsed*11)*Math.cos(elapsed*26):0;
+}
+function updateRubberPointer(){
+ const plan=state.currentDraw,now=serverNow();let speed=0;
+ if(plan){const a=sampleDraw(plan,now).angle,b=sampleDraw(plan,now-24).angle;speed=Math.atan2(Math.sin(a-b),Math.cos(a-b))/.024}
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const bend=(reduced?0:pointerDeflection(rotation,speed,state.people.length))*15;
+ const tip=18+bend,control=18+bend*.48;
+ // Only the flexible lower section bends; the top remains clamped in place.
+ $('pointer-flex-face').setAttribute('d',`M1 1H35V18Q${control+9} 36 ${tip} 52Q${control-9} 36 1 18Z`);
+ $('pointer-flex-edge').setAttribute('d',`M18 4H33V17Q${control+8} 35 ${tip} 49Q${control} 33 18 17Z`);
+}
 function drawRimStuds(count){
  if(!count)return;
  const radius=Math.min(8,TAU/count*573*.22);
@@ -126,7 +145,7 @@ function drawRimStuds(count){
   ctx.lineWidth=1;ctx.strokeStyle='#dbe8ef66';ctx.stroke();ctx.restore();
  }
 }
-function draw(){updateBulbs();const size=1200,c=600,r=598,n=state.people.length;ctx.clearRect(0,0,size,size);ctx.save();ctx.translate(c,c);ctx.rotate(rotation);const won=new Set(visibleWinners().map(w=>w.id));if(!n){ctx.fillStyle='#262a38';ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.fill();for(let i=0;i<12;i++){ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,i*TAU/12,(i+1)*TAU/12);ctx.fillStyle=i%2?'#303442':'#393746';ctx.fill()}}state.people.forEach((p,i)=>{const start=i*TAU/n- Math.PI/2,end=(i+1)*TAU/n-Math.PI/2;ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,start,end);ctx.closePath();ctx.fillStyle=sectorSurface(won.has(p.id)?'#323541':personColour(p),r);ctx.fill();if(highlightedId){
+function draw(){updateBulbs();updateRubberPointer();const size=1200,c=600,r=598,n=state.people.length;ctx.clearRect(0,0,size,size);ctx.save();ctx.translate(c,c);ctx.rotate(rotation);const won=new Set(visibleWinners().map(w=>w.id));if(!n){ctx.fillStyle='#262a38';ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.fill();for(let i=0;i<12;i++){ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,i*TAU/12,(i+1)*TAU/12);ctx.fillStyle=i%2?'#303442':'#393746';ctx.fill()}}state.people.forEach((p,i)=>{const start=i*TAU/n- Math.PI/2,end=(i+1)*TAU/n-Math.PI/2;ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,start,end);ctx.closePath();ctx.fillStyle=sectorSurface(won.has(p.id)?'#323541':personColour(p),r);ctx.fill();if(highlightedId){
  ctx.save();
  if(p.id===highlightedId){
   ctx.fillStyle='#fff1bd';ctx.globalAlpha=.18+highlightPulse*.38;ctx.fill();ctx.globalAlpha=1;
