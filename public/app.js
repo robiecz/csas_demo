@@ -32,16 +32,18 @@ let audioMaster,celebrationBuffer,celebrationLoading,celebrationSource;
 const canvas=$('wheel'),ctx=canvas.getContext('2d');
 const bulbs=[],lampColours=['#168CFF','#00CED1','#29E45A','#B951CC','#FF4B88','#FF8B30','#FFDD78','#21D7AC'];
 let lampFrame='';
-const lampLayer=document.createElement('div');lampLayer.className='bulb-ring';lampLayer.setAttribute('aria-hidden','true');
+const lampLayer=document.createElement('div');lampLayer.className='bulb-ring welcome';lampLayer.setAttribute('aria-hidden','true');
 for(let i=0;i<64;i++){
  const lamp=document.createElement('span'),angle=i*TAU/64;
  lamp.className='bulb';lamp.style.left=(50+49*Math.sin(angle))+'%';lamp.style.top=(50-49*Math.cos(angle))+'%';
  lamp.style.setProperty('--lamp',lampColours[i%lampColours.length]);lampLayer.append(lamp);bulbs.push(lamp);
 }
 canvas.parentElement?.append(lampLayer);
+setTimeout(()=>lampLayer.classList.toggle('welcome',false),3000);
 function updateBulbs(){
  const plan=state.currentDraw,now=serverNow();
  const flashing=!!plan&&!plan.completedAt&&now>=plan.startedAt&&now<plan.revealAt&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+ if(flashing)lampLayer.classList.toggle('welcome',false);
  const step=flashing?Math.floor((now-plan.startedAt)/450):-1,key=(plan?.id||'idle')+':'+step;
  if(key===lampFrame)return;lampFrame=key;
  let seed=2166136261;for(const character of plan?.id||'idle')seed=Math.imul(seed^character.charCodeAt(0),16777619);
