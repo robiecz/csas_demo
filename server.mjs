@@ -71,14 +71,18 @@ export async function handler(req,res){
  const available=next.people.filter(p=>!next.winners.some(w=>w.id===p.id));if(!available.length)return reply(400,{error:'Všichni už vyhráli. Resetuj losování.'});
  // Fresh unbiased Fisher–Yates shuffle using OS-backed cryptographic randomness.
  for(let i=available.length-1;i>0;i--){const k=randomInt(i+1);[available[i],available[k]]=[available[k],available[i]]}
- const winner=available[0];const dramatic=available.length>1&&randomInt(100)<45;
+ const winner=available[0];const winnerIndex=next.people.findIndex(p=>p.id===winner.id);const dramatic=available.length>1&&randomInt(100)<45;
  const motion={
   launchTurns:randomInt(1,4),cruiseTurns:randomInt(4,10),coastTurns:randomInt(5,12),
   launchMs:randomInt(1400,2101),cruiseMs:randomInt(1800,3001),slowMs:randomInt(9000,13501),
   pauseMs:randomInt(650,1501),extraTurns:randomInt(1,3),extraMs:randomInt(5000,7801),
-  nearSectors:randomInt(60,141)/100
+  nearSectors:randomInt(60,141)/100,
+  // The suspense stop is independent of the winning sector.
+  teaseIndex:next.people.length>1?randomInt(next.people.length-1):0,
+  teaseOffset:randomInt(-20,21)/100
  };
- const plan=createDrawPlan({id:randomUUID(),winnerId:winner.id,winnerIndex:next.people.findIndex(p=>p.id===winner.id),count:next.people.length,startRotation:next.rotation||0,startedAt:Date.now()+700,dramatic,motion});
+ if(motion.teaseIndex>=winnerIndex&&next.people.length>1)motion.teaseIndex++;
+ const plan=createDrawPlan({id:randomUUID(),winnerId:winner.id,winnerIndex,count:next.people.length,startRotation:next.rotation||0,startedAt:Date.now()+700,dramatic,motion});
  next.currentDraw=plan;next.rotation=plan.endRotation;
  next.winners.push({...winner,at:new Date().toISOString()});next.lockedUntil=plan.revealAt+10000;lockedUntil=next.lockedUntil;await saveSet(next,state.revision);state=next;
  return reply(200,{state:{...state,lockedUntil,set:selectedSet},winner,dramatic,motion});
