@@ -71,7 +71,7 @@ function update(){
  stage.innerHTML='<div class="animal-reveal"><div class="animal-emerge">'+animalSvg(kind,action)+'</div></div>';stage.dataset.side=String(side);
  stage.style.width=width+'px';stage.style.left=(side===0?x:innerWidth-x-width)+'px';stage.style.top=top+'px';
  stage.style.setProperty('--animal-delay',-elapsed/1000+'s');
- stage.style.setProperty('--emerge-delay',-Math.min(elapsed,1400)/1000+'s');stage.hidden=false;
+ stage.style.setProperty('--emerge-delay',-Math.min(elapsed,3200)/1000+'s');stage.hidden=false;
 }
 document.addEventListener('wheel-state',event=>{snapshot=event.detail;update()});
 window.addEventListener('resize',()=>{lastKey='';update()});
