@@ -146,12 +146,13 @@ function playHighlightSound(plan,now){
  if(cue<=highlightSoundCue)return;highlightSoundCue=cue;
  // A late spectator hears upcoming flashes, never a backlog of missed sounds.
  if(!on||!audio||audio.state!=='running'||elapsed-moments[cue]>180)return;
- if(cue===0){[1047,1319,1568,2093].forEach((freq,i)=>tone(freq,.12,'triangle',.045,i*.065));return}
- const root=[0,1047,1319,1568][cue];
- tone(root,.30,'sine',.095);
- tone(root*2,.22,'sine',.035,.015);
- tone(root*1.5,.18,'triangle',.035,.07);
- tone(root*2,.16,'sine',.03,.14);
+ if(cue===0){[523,659,784,1047,1319,1568].forEach((freq,i)=>tone(freq,.20,'triangle',.065,i*.045));return}
+ const chord=[[523,659,784],[659,784,1047],[784,1047,1319]][cue-1];
+ // Rising major-chord inversions, a warm bass and sparkling bell accents.
+ tone(131,.38,'triangle',.065);
+ chord.forEach((freq,i)=>tone(freq,.40-i*.025,'triangle',.065,i*.018));
+ tone(chord[2]*2,.20,'sine',.055,.12);
+ tone(chord[2]*3,.16,'sine',.03,.22);
 }
 function tick(){const sector=Math.floor(rotation/(TAU/Math.max(1,state.people.length)));if(sector!==lastTick){lastTick=sector;tone(1100+Math.random()*200,.035,'triangle',.055)}}
 function prepareCelebration(){
