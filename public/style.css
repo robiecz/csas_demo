@@ -26,3 +26,18 @@ aside .intro h1{font-size:clamp(24px,2.4vw,32px);line-height:1.15;letter-spacing
 aside .intro p{font-size:12px;line-height:1.6;margin:0;color:var(--muted)}
 .wheel-wrap{width:min(100%,510px,max(160px,calc(100svh - 205px)))}
 @media(max-width:800px){aside .intro{grid-column:1/-1;margin:0 0 4px}.wheel-wrap{width:min(88vw,490px,max(160px,calc(100svh - 205px)))}}
+
+/* The wheel hub is the only spin action. */
+body{padding-bottom:0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#spin.hub{z-index:5;min-width:0;width:105px;height:105px;padding:0;color:#ffd6a0;cursor:pointer;opacity:1;transition:box-shadow .2s,border-color .2s}
+#spin.hub:hover:not(:disabled){background:radial-gradient(circle at 35% 25%,#4b4650,#22212b);border-color:#ffce94;box-shadow:0 4px 22px #0008,0 0 0 4px #12141d,0 0 30px #ffad6144;transform:translate(-50%,-50%)}
+#spin.hub:focus-visible{outline:3px solid #fff1d6;outline-offset:6px}
+#spin.hub:disabled{cursor:default;border-color:#867557}
+#spin.hub .spin-icon{margin:0;font-size:55px;line-height:.85;font-weight:400}
+#spin.hub small{letter-spacing:1px;font-size:8px;margin-top:9px}
+#spin.hub.is-spinning .spin-icon{animation:hub-turn 1.4s linear infinite}
+.wheel-wrap{width:min(100%,560px,max(160px,calc(100svh - 145px)))}
+@keyframes hub-turn{to{transform:rotate(360deg)}}
+@media(max-width:800px){.wheel-wrap{width:min(88vw,490px,max(160px,calc(100svh - 145px)))}}
+@media(max-width:480px),(max-height:650px){#spin.hub{width:78px;height:78px;border-width:5px}#spin.hub .spin-icon{font-size:40px}#spin.hub small{font-size:6px;margin-top:6px}}
