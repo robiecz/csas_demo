@@ -90,6 +90,9 @@ if(locked)unlockTimer=setTimeout(render,Math.min(2147483647,Math.max(0,state.loc
 $('spin').disabled=busy||!available.length||locked;
 $('spin').classList.toggle('is-spinning',busy);
 setDrawFocus(busy);
+$('animals-enabled').checked=!!state.animalsEnabled;
+$('animals-enabled').disabled=busy||locked;
+if(typeof CustomEvent==='function')document.dispatchEvent(new CustomEvent('wheel-state',{detail:{busy,enabled:!!state.animalsEnabled,plan:state.currentDraw,offset:clockOffset}}));
 $('spin-label').textContent=busy||locked?'Level Up':!available.length&&state.people.length?'HOTOVO':'ROZTOČIT';
 const spinHint=busy||locked?'Probíhá losování.':!state.people.length?'Přidej účastníky v administraci.':!available.length?'Všichni již byli vybráni. Vrať kolegy do hry v administraci.':'Roztočit kolo';
 $('spin').setAttribute('aria-label',spinHint);$('spin').title=spinHint;$('status').textContent=spinHint;
@@ -198,6 +201,12 @@ $('reset').onclick=async()=>{
  }catch(e){
   message.textContent='';$('admin-error').textContent='Vrácení kolegů do hry se nepovedlo: '+e.message;
  }finally{button.disabled=false;button.textContent='↺ Vrátit všechny kolegy do hry'}
+};
+$('animals-enabled').onchange=async()=>{
+ const toggle=$('animals-enabled'),message=$('animals-status'),enabled=toggle.checked;toggle.disabled=true;message.textContent='Ukládám…';
+ try{applySnapshot(await api('settings',{animalsEnabled:enabled}));message.textContent=enabled?'Zvířátka jsou zapnutá.':'Zvířátka jsou vypnutá.'}
+ catch(error){toggle.checked=!!state.animalsEnabled;message.textContent=error.message}
+ finally{toggle.disabled=busy||serverNow()<(state.lockedUntil||0)}
 };
 $('sound').onclick=()=>{on=!on;if(on)unlockAudio();else{if(audioMaster)audioMaster.gain.value=0;stopCelebration()}$('sound').setAttribute('aria-pressed',String(on));$('sound').innerHTML=on?'♫ <span>Zvuk zapnutý</span>':'♪ <span>Zvuk vypnutý</span>'};$('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch{toast('Prohlížeč nepodporuje režim celé obrazovky.')}};
 async function enterAutoFullscreen(){
