@@ -95,6 +95,7 @@ export async function handler(req,res){
   teaseOffset:randomInt(-35,36)/100,
   landingFraction:randomInt(15,986)/1000,
   approachSectors:randomInt(40,116)/100,
+  physicsVersion:1,stiffness:randomInt(190,281)/10,damping:randomInt(28,43)/10,friction:randomInt(35,66)/1000,
   finalNudge:randomInt(100)<25,creepMs:randomInt(3500,5501),rock:randomInt(100)<45,settleMs:randomInt(1000,1601)
  };
  if(motion.teaseIndex>=winnerIndex&&next.people.length>1)motion.teaseIndex++;
