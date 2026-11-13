@@ -39,3 +39,18 @@ test('mezizastavení je nezávislé na výherci a dotočení jde vždy vpřed',(
   assert.equal(stops.size,count-1);
  }
 });
+
+test('mechanický dojezd: náhodné místo v celé výseči a pomalé zhoupnutí zůstávají na výherci',()=>{
+ const normalize=a=>((a%TAU)+TAU)%TAU;
+ for(const count of [1,2,13,300])for(const winnerIndex of [0,count-1])for(const fraction of [.015,.04,.25,.5,.75,.96,.985])for(const dramatic of [false,true])for(const rock of [false,true]){
+  const plan=createDrawPlan({id:'mechanical',winnerId:'win',winnerIndex,count,startRotation:2,startedAt:1000,dramatic,motion:{...motion,landingFraction:fraction,approachSectors:1.15,creepMs:4500,settleMs:1200,rock}});
+  const coordinate=normalize(TAU-plan.endRotation)/(TAU/count);
+  assert.ok(Math.abs(coordinate-(winnerIndex+fraction))<1e-9);
+  const creep=plan.phases.find(p=>p.easing==='creep');assert.equal(creep.duration,4500);assert.ok(creep.to>creep.from);
+  for(let i=0;i<plan.phases.length-1;i++){const a=plan.phases[i],b=plan.phases[i+1];assert.equal(a.to,b.from);assert.equal(a.start+a.duration,b.start)}
+  const settle=plan.phases.find(p=>p.easing==='settle');assert.equal(!!settle,rock);
+  if(settle)for(let t=0;t<=1200;t+=25){const view=sampleDraw(plan,plan.startedAt+settle.start+t);const index=Math.floor(normalize(TAU-view.angle)/(TAU/count));assert.equal(index,winnerIndex)}
+  assert.equal(sampleDraw(plan,plan.stoppedAt).phase,'highlight');
+  assert.deepEqual(sampleDraw(plan,plan.stoppedAt-500),sampleDraw(JSON.parse(JSON.stringify(plan)),plan.stoppedAt-500));
+ }
+});
