@@ -52,9 +52,18 @@ export async function handler(req,res){
  else if(path==='/api/reset'){next.winners=[];await save(next,state.revision);state=next}
  else if(path==='/api/spin'){
  const available=next.people.filter(p=>!next.winners.some(w=>w.id===p.id));if(!available.length)return reply(400,{error:'Všichni už vyhráli. Resetuj losování.'});
- const winner=available[randomInt(available.length)];const dramatic=available.length>1&&randomInt(100)<45;
- next.winners.push({...winner,at:new Date().toISOString()});next.lockedUntil=Date.now()+(dramatic?26000:18500);lockedUntil=next.lockedUntil;await save(next,state.revision);state=next;
- return reply(200,{state:{...state,lockedUntil},winner,dramatic});
+ // Fresh unbiased Fisher–Yates shuffle using OS-backed cryptographic randomness.
+ for(let i=available.length-1;i>0;i--){const k=randomInt(i+1);[available[i],available[k]]=[available[k],available[i]]}
+ const winner=available[0];const dramatic=available.length>1&&randomInt(100)<45;
+ const motion={
+  launchTurns:randomInt(1,4),cruiseTurns:randomInt(4,10),coastTurns:randomInt(5,12),
+  launchMs:randomInt(1400,2101),cruiseMs:randomInt(1800,3001),slowMs:randomInt(9000,13501),
+  pauseMs:randomInt(650,1501),extraTurns:randomInt(1,3),extraMs:randomInt(5000,7801),
+  nearSectors:randomInt(60,141)/100
+ };
+ const animationMs=motion.launchMs+motion.cruiseMs+motion.slowMs+2700+(dramatic?motion.pauseMs+motion.extraMs:0);
+ next.winners.push({...winner,at:new Date().toISOString()});next.lockedUntil=Date.now()+Math.max(30000,animationMs+5000);lockedUntil=next.lockedUntil;await save(next,state.revision);state=next;
+ return reply(200,{state:{...state,lockedUntil},winner,dramatic,motion});
  }else return reply(404,{error:'Nenalezeno.'});
  return reply(200,{...state,lockedUntil});
  }
