@@ -64,6 +64,22 @@ function visibleWinners(){const plan=state.currentDraw;return plan&&!plan.comple
 function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',6000)}
 function initials(name){return name.split(' ').map(s=>s[0]).slice(0,2).join('')}
 function personRow(p,i,won=false){const row=document.createElement('div');row.className='person'+(won?' won':'');const avatar=document.createElement('span');avatar.className='avatar';avatar.textContent=initials(p.name);const colour=personColour(p);avatar.style.setProperty('--avatar',colour);avatar.style.setProperty('--ink',colourText(colour));const name=document.createElement('span');name.className='person-name';name.textContent=p.name;row.append(avatar,name);return row}
+let wheelPositionAnimation;
+function setDrawFocus(active){
+ const root=document.documentElement;
+ if(root.classList.contains('draw-focus')===active)return;
+ const wheel=document.querySelector?.('.wheel-wrap');
+ const before=wheel?.getBoundingClientRect();
+ wheelPositionAnimation?.cancel();
+ root.classList.toggle('draw-focus',active);
+ if(!wheel?.animate||!before||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ const after=wheel.getBoundingClientRect();
+ if(!after.width||!after.height)return;
+ wheelPositionAnimation=wheel.animate([
+  {transformOrigin:'0 0',transform:`translate(${before.left-after.left}px,${before.top-after.top}px) scale(${before.width/after.width},${before.height/after.height})`},
+  {transformOrigin:'0 0',transform:'none'}
+ ],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'});
+}
 function render(){const won=new Set(visibleWinners().map(w=>w.id)),available=state.people.filter(p=>!won.has(p.id));const currentPresenter=visibleWinners().at(-1);
 $('current-presenter').textContent=currentPresenter?currentPresenter.name:'Ještě nebyl vybrán';
 $('current-presenter').classList.toggle('is-empty',!currentPresenter);
@@ -72,7 +88,7 @@ clearTimeout(unlockTimer);
 if(locked)unlockTimer=setTimeout(render,Math.min(2147483647,Math.max(0,state.lockedUntil-serverNow())+30));
 $('spin').disabled=busy||!available.length||locked;
 $('spin').classList.toggle('is-spinning',busy);
-document.documentElement.classList.toggle('draw-focus',busy);
+setDrawFocus(busy);
 $('spin-label').textContent=busy||locked?'Level Up':!available.length&&state.people.length?'HOTOVO':'ROZTOČIT';
 const spinHint=busy||locked?'Probíhá losování.':!state.people.length?'Přidej účastníky v administraci.':!available.length?'Všichni již byli vybráni. Vrať kolegy do hry v administraci.':'Roztočit kolo';
 $('spin').setAttribute('aria-label',spinHint);$('spin').title=spinHint;$('status').textContent=spinHint;
