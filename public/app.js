@@ -17,7 +17,18 @@ $('continue').onclick=()=>{$('winner-dialog').close();render()};
 $('admin').onclick=()=>{if(busy)return;$('admin-error').textContent='';$('admin-dialog').showModal()};document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
 $('login-form').onsubmit=async e=>{e.preventDefault();try{auth='Basic '+btoa('admin:'+unescape(encodeURIComponent($('password').value)));await api('auth');$('password').value='';$('login-form').hidden=true;$('admin-panel').hidden=false;render()}catch(error){auth='';$('admin-error').textContent=error.message}};
 $('add-form').onsubmit=async e=>{e.preventDefault();try{state=await api('add',{names:$('names').value});$('names').value='';$('admin-error').textContent='';render()}catch(error){$('admin-error').textContent=error.message}};
-$('reset').onclick=async()=>{if(!confirm('Resetovat výhry? Všichni účastníci budou znovu ve hře.'))return;try{state=await api('reset',{});rotation=0;render();$('admin-error').textContent=''}catch(e){$('admin-error').textContent=e.message}};
+$('reset').onclick=async()=>{
+ if(!confirm('Vrátit všechny kolegy do hry? Dosavadní výběry se vymažou a všichni budou znovu ve hře.'))return;
+ const button=$('reset'),message=$('reset-status');
+ button.disabled=true;button.textContent='Vracím kolegy do hry…';
+ $('admin-error').textContent='';message.style.color='';message.textContent='Probíhá vrácení kolegů do hry…';
+ try{
+  state=await api('reset',{});rotation=0;render();
+  message.style.color='#b8d8ab';message.textContent='✓ Hotovo! Všichni kolegové jsou zpět ve hře.';
+ }catch(e){
+  message.textContent='';$('admin-error').textContent='Vrácení kolegů do hry se nepovedlo: '+e.message;
+ }finally{button.disabled=false;button.textContent='↺ Vrátit všechny kolegy do hry'}
+};
 $('sound').onclick=()=>{on=!on;$('sound').setAttribute('aria-pressed',String(on));$('sound').innerHTML=on?'♫ <span>Zvuk zapnutý</span>':'♪ <span>Zvuk vypnutý</span>'};$('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch{toast('Prohlížeč nepodporuje režim celé obrazovky.')}};
 function confetti(){const el=$('confetti'),c=el.getContext('2d'),w=el.width=innerWidth*devicePixelRatio,h=el.height=innerHeight*devicePixelRatio,particles=Array.from({length:180},()=>({x:w/2,y:h*.4,vx:(Math.random()-.5)*24*devicePixelRatio,vy:(-Math.random()*17-3)*devicePixelRatio,size:(Math.random()*6+3)*devicePixelRatio,color:palette[Math.floor(Math.random()*8)],a:Math.random()*6}));const start=performance.now();let last=start;function frame(now){const dt=Math.min(2,(now-last)/16.67);last=now;c.clearRect(0,0,w,h);particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=.17*devicePixelRatio*dt;p.a+=.07*dt;c.save();c.translate(p.x,p.y);c.rotate(p.a);c.fillStyle=p.color;c.fillRect(-p.size/2,-p.size/2,p.size,p.size*.5);c.restore()});if(now-start<5500)requestAnimationFrame(frame);else c.clearRect(0,0,w,h)}requestAnimationFrame(frame)}
 async function refresh(){if(busy)return;try{state=await api('state');render()}catch(e){$('status').textContent='Spojení se serverem není dostupné.';$('spin').disabled=true}}refresh();setInterval(()=>{if(!document.hidden)refresh()},30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
