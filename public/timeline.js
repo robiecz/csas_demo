@@ -7,7 +7,15 @@ export function createDrawPlan({id,winnerId,winnerIndex,count,startRotation=0,st
  add(from+TAU*motion.cruiseTurns,motion.cruiseMs,'linear');
  const target=normalize(TAU-(winnerIndex+.5)*TAU/count);
  const landing=from+TAU*motion.coastTurns+normalize(target-normalize(from));
- if(dramatic){add(landing-TAU/count*motion.nearSectors,motion.slowMs,'coast');add(from,motion.pauseMs,'linear','pause');add(landing+TAU*motion.extraTurns,motion.extraMs,'finish')}
+ if(dramatic){
+  const teaseTarget=Number.isInteger(motion.teaseIndex)
+   ?normalize(TAU-(motion.teaseIndex+.5+(motion.teaseOffset||0))*TAU/count)
+   :normalize(target-TAU/count*motion.nearSectors);
+  const teaseLanding=from+TAU*motion.coastTurns+normalize(teaseTarget-normalize(from));
+  add(teaseLanding,motion.slowMs,'coast');
+  add(from,motion.pauseMs,'linear','pause');
+  add(from+TAU*motion.extraTurns+normalize(target-normalize(from)),motion.extraMs,'finish');
+ }
  else add(landing,motion.slowMs,'coast');
  const stoppedAt=startedAt+elapsed;
  return {id,winnerId,startedAt,stoppedAt,revealAt:stoppedAt+2700,endRotation:normalize(from),phases,completedAt:null};
