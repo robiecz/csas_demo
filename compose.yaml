@@ -1,0 +1,13 @@
+services:
+  kolo:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+    ports:
+      - "127.0.0.1:3080:3080"
+    volumes:
+      - kolo-data:/app/data
+volumes:
+  kolo-data:
