@@ -83,8 +83,9 @@ header .tools{justify-self:end}
 
 /* Presenter block follows the wheel's center on desktop and sits centered below it on mobile. */
 @media(min-width:801px){
- .arena{align-items:start}
- .arena>aside{height:min(560px,max(160px,calc(100svh - 145px)));display:flex;align-items:center;justify-content:center}
+ .arena{align-items:center}
+ .wheel-base{display:none}
+ .arena>aside{height:auto;display:flex;align-items:center;justify-content:center}
  .arena>aside .intro{width:100%;margin:0}
 }
 @media(max-width:800px){
@@ -93,3 +94,4 @@ header .tools{justify-self:end}
  .arena>aside .intro h1{white-space:normal;text-align:center}
  .current-presenter{text-align:center;margin-left:auto;margin-right:auto}
 }
+
