@@ -72,6 +72,7 @@ clearTimeout(unlockTimer);
 if(locked)unlockTimer=setTimeout(render,Math.min(2147483647,Math.max(0,state.lockedUntil-serverNow())+30));
 $('spin').disabled=busy||!available.length||locked;
 $('spin').classList.toggle('is-spinning',busy);
+document.documentElement.classList.toggle('draw-focus',busy);
 $('spin-label').textContent=busy||locked?'Level Up':!available.length&&state.people.length?'HOTOVO':'ROZTOČIT';
 const spinHint=busy||locked?'Probíhá losování.':!state.people.length?'Přidej účastníky v administraci.':!available.length?'Všichni již byli vybráni. Vrať kolegy do hry v administraci.':'Roztočit kolo';
 $('spin').setAttribute('aria-label',spinHint);$('spin').title=spinHint;$('status').textContent=spinHint;
