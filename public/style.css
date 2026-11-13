@@ -107,3 +107,6 @@ header .tools{justify-self:end}
 .pointer:before,.pointer:after{content:'';position:absolute;inset:0;pointer-events:none}
 .pointer:before{clip-path:polygon(0 0,100% 0,100% 34%,50% 100%,0 34%);background:linear-gradient(135deg,#fff7dc 0%,#ffe2a8 20%,#f4bd70 47%,#ce873b 100%);box-shadow:inset 0 3px 1px #fff8,inset 2px 0 1px #ffe7b6}
 .pointer:after{clip-path:polygon(50% 7%,94% 7%,94% 32%,50% 91%);background:linear-gradient(100deg,#9e581a66,#ca843add 70%,#8e4b18);box-shadow:inset -2px 0 2px #9f571e}
+
+/* Center the presenter name and its heading on the same axis. */
+.arena>aside .intro,.arena>aside .intro h1,.arena>aside .current-presenter{text-align:center}
