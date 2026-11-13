@@ -24,7 +24,7 @@ function rememberAdmin(req,res){
  res.setHeader('Set-Cookie',ADMIN_COOKIE+'='+expires+'.'+signSession(expires)+'; Max-Age='+ADMIN_AGE+'; Path=/; HttpOnly; SameSite=Strict'+(secure?'; Secure':''));
 }
 
-const assets={'/celebration-audio.js':['celebration-audio.js','text/javascript; charset=utf-8'],'/sets-ui.js':['sets-ui.js','text/javascript; charset=utf-8'],'/timeline.js':['timeline.js','text/javascript; charset=utf-8'],'/favicon.svg':['favicon.svg','image/svg+xml'],'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
+const assets={'/animals.js':['animals.js','text/javascript; charset=utf-8'],'/celebration-audio.js':['celebration-audio.js','text/javascript; charset=utf-8'],'/sets-ui.js':['sets-ui.js','text/javascript; charset=utf-8'],'/timeline.js':['timeline.js','text/javascript; charset=utf-8'],'/favicon.svg':['favicon.svg','image/svg+xml'],'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
 export async function handler(req,res){
  let selectedSet;
  const reply=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify({...data,...(data.people?{set:selectedSet}:{}),serverNow:Date.now()}))};
@@ -60,6 +60,9 @@ export async function handler(req,res){
  if(!data.winnerId||next.winners.at(-1)?.id!==data.winnerId)return reply(409,{error:'Mezitím proběhlo jiné losování. Obnov stránku.'});
  if(next.currentDraw&&Date.now()<next.currentDraw.revealAt)return reply(409,{error:'Ještě probíhá vyhlášení. Za okamžik můžeš pokračovat.'});
  next.lockedUntil=0;if(next.currentDraw)next.currentDraw.completedAt=Date.now();lockedUntil=0;await saveSet(next,state.revision);state=next;
+ }else if(path==='/api/settings'){
+ if(typeof data.animalsEnabled!=='boolean')return reply(400,{error:'Neplatné nastavení zvířátek.'});
+ next.animalsEnabled=data.animalsEnabled;await saveSet(next,state.revision);state=next;
  }else if(path==='/api/add'){
  const names=String(data.names||'').split(/\n/).map(n=>n.trim().replace(/\s+/g,' ')).filter(Boolean);
  if(!names.length||names.some(n=>n.length>80||!/^\p{L}[\p{L}\p{M}\p{N} '’.-]*$/u.test(n)))return reply(400,{error:'Zadej jméno nebo název na samostatný řádek (max. 80 znaků), použij písmena, čísla, mezery, tečky, pomlčky nebo apostrofy.'});
