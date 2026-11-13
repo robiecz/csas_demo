@@ -2,11 +2,12 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {animalKindForDraw} from './public/companions.js';
 test('zvířátka: jedna postavička, různé strany a činnosti, vypnutí a mobil',()=>{
  const stage={style:{setProperty(){}},dataset:{},setAttribute(){}};
  let listener,timer,now=1000,reduced=false;
- const context=vm.createContext({document:{createElement:()=>stage,body:{append(){}},addEventListener:(name,fn)=>listener=fn,querySelector:()=>({offsetWidth:760})},window:{addEventListener(){}},Date:{now:()=>now},innerWidth:1920,innerHeight:1080,matchMedia:()=>({matches:reduced}),setInterval:fn=>timer=fn});
- vm.runInContext(readFileSync('public/animals.js','utf8'),context);
+ const context=vm.createContext({animalKindForDraw,document:{createElement:()=>stage,body:{append(){}},addEventListener:(name,fn)=>listener=fn,querySelector:()=>({offsetWidth:760})},window:{addEventListener(){}},Date:{now:()=>now},innerWidth:1920,innerHeight:1080,matchMedia:()=>({matches:reduced}),setInterval:fn=>timer=fn});
+ vm.runInContext(readFileSync('public/animals.js','utf8').replace(/^import[^\n]+\n/,''),context);
  const detail={busy:true,enabled:true,plan:{id:'test-draw',startedAt:1000},offset:0};
  const kinds=new Set(),actions=new Set(),sides=new Set();
  for(let i=0;i<600;i++){
@@ -23,6 +24,10 @@ test('zvířátka: jedna postavička, různé strany a činnosti, vypnutí a mob
    assert.equal(stage.innerHTML,unchanged,'stejné zvířátko po celou dobu točení');
    assert.deepEqual([stage.style.left,stage.style.top,stage.style.width],position,'stále na stejném místě');
   }
+ }
+ for(const kind of ['dog','cat','toddler','llama','snake','parrot']){
+  listener({detail:{...detail,plan:{...detail.plan,id:'server-'+kind,animalKind:kind}}});
+  assert.ok(stage.innerHTML.includes('little-animal '+kind+' '),'server určuje stejnou postavičku pro všechny diváky');
  }
  assert.equal(kinds.size,6);assert.equal(actions.size,22);assert.equal(sides.size,2);
  listener({detail:{...detail,enabled:false}});assert.equal(stage.hidden,true);

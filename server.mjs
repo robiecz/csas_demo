@@ -1,3 +1,4 @@
+import {companionKinds,animalKindForDraw} from './public/companions.js';
 import http from 'node:http';
 import {readFileSync} from 'node:fs';
 import {load,save} from './store.mjs';
@@ -24,7 +25,7 @@ function rememberAdmin(req,res){
  res.setHeader('Set-Cookie',ADMIN_COOKIE+'='+expires+'.'+signSession(expires)+'; Max-Age='+ADMIN_AGE+'; Path=/; HttpOnly; SameSite=Strict'+(secure?'; Secure':''));
 }
 
-const assets={'/animals.js':['animals.js','text/javascript; charset=utf-8'],'/celebration-audio.js':['celebration-audio.js','text/javascript; charset=utf-8'],'/sets-ui.js':['sets-ui.js','text/javascript; charset=utf-8'],'/timeline.js':['timeline.js','text/javascript; charset=utf-8'],'/favicon.svg':['favicon.svg','image/svg+xml'],'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
+const assets={'/companions.js':['companions.js','text/javascript; charset=utf-8'],'/animals.js':['animals.js','text/javascript; charset=utf-8'],'/celebration-audio.js':['celebration-audio.js','text/javascript; charset=utf-8'],'/sets-ui.js':['sets-ui.js','text/javascript; charset=utf-8'],'/timeline.js':['timeline.js','text/javascript; charset=utf-8'],'/favicon.svg':['favicon.svg','image/svg+xml'],'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
 export async function handler(req,res){
  let selectedSet;
  const reply=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify({...data,...(data.people?{set:selectedSet}:{}),serverNow:Date.now()}))};
@@ -86,6 +87,11 @@ export async function handler(req,res){
  };
  if(motion.teaseIndex>=winnerIndex&&next.people.length>1)motion.teaseIndex++;
  const plan=createDrawPlan({id:randomUUID(),winnerId:winner.id,winnerIndex,count:next.people.length,startRotation:next.rotation||0,startedAt:Date.now()+700,dramatic,motion});
+ if(next.animalsEnabled){
+  const previous=next.lastAnimalKind||animalKindForDraw(next.currentDraw);
+  const choices=companionKinds.filter(kind=>kind!==previous);
+  plan.animalKind=choices[randomInt(choices.length)];next.lastAnimalKind=plan.animalKind;
+ }
  next.currentDraw=plan;next.rotation=plan.endRotation;
  next.winners.push({...winner,at:new Date().toISOString()});next.lockedUntil=plan.revealAt+10000;lockedUntil=next.lockedUntil;await saveSet(next,state.revision);state=next;
  return reply(200,{state:{...state,lockedUntil,set:selectedSet},winner,dramatic,motion});

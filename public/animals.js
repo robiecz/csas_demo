@@ -1,3 +1,4 @@
+import {animalKindForDraw} from './companions.js';
 // Small SVG companions share the draw's clock, so spectators see the same visitor.
 const stage=document.createElement('div');
 stage.id='animal-stage';stage.hidden=true;stage.setAttribute('aria-hidden','true');
@@ -66,7 +67,8 @@ function update(){
  if(gaps[side]<140){stage.hidden=true;return}
  const width=Math.min(310,gaps[side]-48),x=24+rng()*Math.max(0,gaps[side]-width-48);
  const top=Math.max(24,Math.min(innerHeight-width-24,innerHeight*(.28+rng()*.4)));
- const kinds=Object.keys(companionActions),kind=kinds[Math.floor(rng()*kinds.length)],actions=companionActions[kind];
+ rng(); // Keep action selection independent of the server-selected kind.
+ const kind=animalKindForDraw(snapshot.plan),actions=companionActions[kind];
  const action=actions[Math.floor(rng()*actions.length)];
  stage.innerHTML='<div class="animal-reveal"><div class="animal-emerge">'+animalSvg(kind,action)+'</div></div>';stage.dataset.side=String(side);
  stage.style.width=width+'px';stage.style.left=(side===0?x:innerWidth-x-width)+'px';stage.style.top=top+'px';
