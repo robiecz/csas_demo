@@ -104,3 +104,24 @@ test('fyzikální dojezd: setrvačnost, klesající rychlost, překmit a tlumen�
   assert.equal(sampleDraw(plan,plan.stoppedAt).phase,'highlight');
  }
 });
+
+test('náhodný zpětný restart a sousední skoky vždy končí na vybraném výherci',()=>{
+ const norm=a=>((a%TAU)+TAU)%TAU;
+ for(const count of [2,13,300])for(const fraction of [.015,.5,.985])for(const dramatic of [false,true])for(const reverseRestart of [false,true])for(const neighborHop of [-1,0,1]){
+  const plan=createDrawPlan({id:'surprise',winnerId:'win',winnerIndex:count-1,count,startRotation:.7,startedAt:1000,dramatic,motion:{...motion,physicsVersion:1,landingFraction:fraction,finalNudge:true,reverseRestart,neighborHop}});
+  assert.ok(plan.phases[0].to>plan.phases[0].from);assert.ok(plan.phases[1].to>plan.phases[1].from,'první roztočení vždy vpřed');
+  const launches=plan.phases.filter(p=>p.easing==='accelerate');
+  if(dramatic)assert.equal(Math.sign(launches[1].to-launches[1].from),reverseRestart?-1:1);
+  else assert.equal(launches.length,1,'opačný směr patří pouze druhému roztočení');
+  const hop=plan.phases.find(p=>p.kind==='neighbor-hop');assert.equal(!!hop,neighborHop!==0);
+  if(hop)assert.ok(Math.abs((hop.to-hop.from)/(TAU/count)-neighborHop)<1e-8,'skok právě o jednu sousední výseč');
+  for(let i=1;i<plan.phases.length;i++)assert.equal(plan.phases[i].from,plan.phases[i-1].to);
+  for(const phase of plan.phases){
+   const at=plan.startedAt+phase.start+phase.duration*.61;
+   const view=sampleDraw(plan,at);assert.ok(Number.isFinite(view.angle));
+   assert.deepEqual(view,sampleDraw(JSON.parse(JSON.stringify(plan)),at));
+  }
+  assert.ok(Math.abs(norm(TAU-plan.endRotation)-(count-1+fraction)*TAU/count)<1e-8);
+  assert.equal(sampleDraw(plan,plan.stoppedAt).phase,'highlight');
+ }
+});

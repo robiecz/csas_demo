@@ -101,6 +101,9 @@ export async function handler(req,res){
   finalNudge:randomInt(100)<25,creepMs:randomInt(3500,5501),rock:randomInt(100)<45,settleMs:randomInt(1000,1601)
  };
  if(motion.teaseIndex>=winnerIndex&&next.people.length>1)motion.teaseIndex++;
+ motion.reverseRestart=dramatic&&randomInt(2)===0;
+ motion.neighborHop=available.length>1&&randomInt(100)<20?(randomInt(2)?1:-1):0;
+ motion.hopPauseMs=randomInt(450,1001);
  const plan=createDrawPlan({id:randomUUID(),winnerId:winner.id,winnerIndex,count:next.people.length,startRotation:next.rotation||0,startedAt:Date.now()+700,dramatic,motion});
  if(next.animalsEnabled){
   if(next.onlyLizard){plan.animalKind='lizard'}else{
@@ -125,5 +128,6 @@ export async function handler(req,res){
 }
 export const server=http.createServer(handler);
 if(process.argv[1]===fileURLToPath(import.meta.url))server.listen(Number(process.env.PORT||3080),process.env.HOST||'127.0.0.1',()=>console.log('Kolo štěstí: http://localhost:'+(process.env.PORT||3080))); 
+
 
 
