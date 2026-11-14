@@ -100,7 +100,9 @@ $('only-lizard').checked=!!state.onlyLizard;
 $('only-lizard').disabled=busy||locked;
 $('animals-enabled').disabled=busy||locked;
 if(typeof CustomEvent==='function')document.dispatchEvent(new CustomEvent('wheel-state',{detail:{busy,enabled:!!state.animalsEnabled,plan:state.currentDraw,offset:clockOffset}}));
-$('spin-label').textContent=busy||locked?'Level Up':!available.length&&state.people.length?'HOTOVO':'ROZTOČIT';
+const drawSetName=state.set?.name||'Výchozí sada';
+$('spin-label').textContent=busy||locked?drawSetName:!available.length&&state.people.length?'HOTOVO':'ROZTOČIT';
+$('spin-label').style.setProperty('--set-label-size',Math.max(8,Math.min(18,70/Math.sqrt(Math.max(1,drawSetName.length))))+'px');
 const spinHint=busy||locked?'Probíhá losování.':!state.people.length?'Přidej účastníky v administraci.':!available.length?'Všichni již byli vybráni. Vrať kolegy do hry v administraci.':'Roztočit kolo';
 $('spin').setAttribute('aria-label',spinHint);$('spin').title=spinHint;$('status').textContent=spinHint;
 

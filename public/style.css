@@ -285,3 +285,6 @@ html.draw-focus{overflow:hidden}
 @keyframes lizard-arm-flail{from{transform:rotate(-9deg)}to{transform:rotate(12deg)}}
 @keyframes lizard-googly{0%,100%{transform:translate(0,0)}33%{transform:translate(2px,3px)}66%{transform:translate(-2px,1px)}}
 .lizard [class^="lizard-"]{animation-delay:var(--animal-delay,0s)}
+
+/* Pulse the current set name, wrapping longer names inside the hub. */
+#spin.hub.is-spinning small{font-size:var(--set-label-size,14px);max-width:calc(100% - 12px);white-space:normal;overflow-wrap:anywhere;text-align:center;line-height:1.15;letter-spacing:0}
