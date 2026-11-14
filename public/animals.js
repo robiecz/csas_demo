@@ -6,6 +6,7 @@ document.body.append(stage);
 let snapshot=null,lastKey='';
 function random(seed){let hash=2166136261;for(const c of seed)hash=Math.imul(hash^c.charCodeAt(0),16777619);return()=>{hash=(hash+0x6D2B79F5)|0;let t=Math.imul(hash^(hash>>>15),1|hash);t^=t+Math.imul(t^(t>>>7),61|t);return((t^(t>>>14))>>>0)/4294967296}}
 function animalSvg(kind,action){
+ if(kind==='lizard')return lizardSvg(action);
  if(!['dog','cat'].includes(kind))return guestSvg(kind,action);
  const cat=kind==='cat';
  return `<svg viewBox="0 0 240 220" xmlns="http://www.w3.org/2000/svg" class="little-animal ${kind} action-${action}">
@@ -43,7 +44,26 @@ function animalSvg(kind,action){
 }
 
 // Each visitor has its own silhouette and movements, all on the shared draw clock.
-const companionActions={dog:['sniff','paw','groom','scratch','yawn','wag'],cat:['sniff','paw','groom','scratch','yawn','wag'],toddler:['clap','wave','bounce','peek'],llama:['chew','ears','look','prance'],snake:['slither','tongue','sway','coil'],parrot:['flap','preen','bob','dance']};
+const companionActions={dog:['sniff','paw','groom','scratch','yawn','wag'],cat:['sniff','paw','groom','scratch','yawn','wag'],toddler:['clap','wave','bounce','peek'],llama:['chew','ears','look','prance'],snake:['slither','tongue','sway','coil'],parrot:['flap','preen','bob','dance'],lizard:['neck-bounce','neck-metal','neck-jelly','neck-wind']};
+function lizardSvg(action){
+ return `<svg viewBox="0 0 240 220" xmlns="http://www.w3.org/2000/svg" class="little-animal lizard action-${action}"><defs><linearGradient id="lizard-rubber" x2="1" y2=".6"><stop stop-color="#63e488"/><stop offset=".4" stop-color="#24ba73"/><stop offset="1" stop-color="#087654"/></linearGradient><linearGradient id="lizard-mouth" x2=".4" y2="1"><stop stop-color="#d22c42"/><stop offset="1" stop-color="#821d31"/></linearGradient><linearGradient id="lizard-tongue" x2=".3" y2="1"><stop stop-color="#ff7684"/><stop offset="1" stop-color="#df324f"/></linearGradient></defs>
+ <ellipse cx="119" cy="200" rx="93" ry="9" fill="#0005"/>
+ <g class="lizard-body"><path d="M123 164Q150 194 185 158Q212 131 235 158Q210 149 199 172Q166 216 120 188" fill="url(#lizard-rubber)" stroke="#68d996" stroke-width="1.5"/>
+ <path d="M67 137Q104 122 127 150L136 178Q125 200 95 196L58 185Q48 164 67 137" fill="url(#lizard-rubber)"/>
+ <path d="M65 174L39 193L26 190M112 179L132 203L147 201" fill="none" stroke="url(#lizard-rubber)" stroke-width="15" stroke-linecap="round"/>
+ <path d="M29 188l-6 7m8-4-1 9m112 0 6 6m-1-8 8 2" stroke="#41cf82" stroke-width="5" stroke-linecap="round"/>
+ <g class="lizard-neck"><path d="M68 147Q63 117 77 92L113 91Q111 122 122 150" fill="url(#lizard-rubber)"/>
+ <g fill="none" stroke-linecap="round"><path d="M72 104Q93 115 113 105M69 112Q91 124 114 113M68 120Q92 132 115 121M68 128Q92 140 117 129M69 136Q93 147 120 138" stroke="#087957" stroke-width="5"/><path d="M71 102Q92 113 112 103M69 110Q92 122 113 111M68 118Q91 130 114 119M68 126Q92 138 116 127M69 134Q93 145 119 136" stroke="#64dd94" stroke-width="3"/></g>
+ <g class="lizard-arm left"><path d="M76 107L38 103L31 93M36 104L24 106M35 101L26 97" fill="none" stroke="#37cd80" stroke-width="7" stroke-linecap="round"/></g>
+ <g class="lizard-arm right"><path d="M110 109L144 95L146 84M142 97L154 94M143 94L153 87" fill="none" stroke="#2bc67b" stroke-width="7" stroke-linecap="round"/></g>
+ <g class="lizard-head"><ellipse cx="117" cy="50" rx="12" ry="15" fill="#eff8e8"/><circle class="lizard-pupil far" cx="121" cy="49" r="5" fill="#172b25"/>
+ <path d="M54 82Q43 72 48 58L66 25Q76 7 91 13Q109 16 109 40L110 71Q119 86 105 96Q80 108 54 82Z" fill="url(#lizard-rubber)" stroke="#77e99f" stroke-width="2"/>
+ <path d="M55 76Q51 68 57 56L74 25Q80 15 88 21Q99 23 98 43L99 71Q106 83 96 88Q73 97 55 76Z" fill="url(#lizard-mouth)" stroke="#fa7380" stroke-width="2"/>
+ <path class="lizard-tongue" d="M88 79Q75 65 58 65Q43 65 28 49Q19 43 20 53Q26 73 55 79Q74 88 88 79Z" fill="url(#lizard-tongue)" stroke="#ff9aa1" stroke-width="1.5"/>
+ <ellipse cx="58" cy="47" rx="12" ry="15" fill="#f5ffef"/><ellipse class="lizard-pupil near" cx="56" cy="45" rx="5" ry="6" fill="#162c24"/><circle cx="54" cy="43" r="1.8" fill="#fff"/>
+ <path d="M65 88Q81 96 97 89" fill="none" stroke="#7ef2a3" stroke-width="3" stroke-linecap="round"/></g></g></g></svg>`;
+}
+
 function guestSvg(kind,action){
  const eyes='<g class="guest-eyes"><circle cx="92" cy="76" r="4"/><circle cx="122" cy="76" r="4"/><circle cx="93" cy="75" r="1.2" fill="white"/><circle cx="123" cy="75" r="1.2" fill="white"/></g>';
  let body='';
