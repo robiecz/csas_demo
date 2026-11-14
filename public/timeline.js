@@ -39,9 +39,9 @@ export function createDrawPlan({id,winnerId,winnerIndex,count,startRotation=0,st
  // Keep old saved plans compatible; new draws may land anywhere inside the sector.
  const fraction=Number.isFinite(motion.landingFraction)?Math.max(.015,Math.min(.985,motion.landingFraction)):.5;
  const sector=TAU/count,target=normalize(TAU-(winnerIndex+fraction)*sector);
- let incomingSpeed=cruiseSpeed;
+ let incomingSpeed=cruiseSpeed,travelDirection=1;
  const physicalCoast=(landing,duration)=>{
-  const distance=landing-from;
+  const distance=Math.abs(landing-from);
   const seconds=Math.max(duration/1000,2*distance/incomingSpeed*1.001);
   const ratio=incomingSpeed*seconds/distance;
   let lo=.00001,hi=64;
@@ -57,7 +57,7 @@ export function createDrawPlan({id,winnerId,winnerIndex,count,startRotation=0,st
    if(motion.finalNudge===false){physicalCoast(landing,duration);return}
    // Slow to the loaded side of the last sector boundary, then release the
    // elastic latch. Its energy produces the forward overshoot and recoil.
-   const offset=-(1-fraction+.035);
+   const offset=travelDirection>0?-(1-fraction+.035):fraction+.035;
    physicalCoast(landing+offset*sector,duration);
    const response=simulateDetent({displacement:offset,stiffness:motion.stiffness,damping:motion.damping,friction:motion.friction});
    const samples=response.samples.map(x=>Number((landing+x*sector).toFixed(9)));
@@ -75,6 +75,17 @@ export function createDrawPlan({id,winnerId,winnerIndex,count,startRotation=0,st
   add(landing+overshoot,motion.creepMs||3800,'creep');
   if(overshoot)add(landing,motion.settleMs||1100,'settle','settling');
  };
+ const completeLanding=(landing,duration,easing)=>{
+  const hop=count>1&&motion.physicsVersion===1&&[-1,1].includes(motion.neighborHop)?motion.neighborHop:0;
+  finishLanding(landing-hop*sector,duration,easing);
+  if(hop){
+   add(from,motion.hopPauseMs||650,'linear','pause');
+   const response=simulateDetent({displacement:-hop,stiffness:motion.stiffness,damping:motion.damping,friction:motion.friction});
+   const samples=response.samples.map(x=>Number((landing+x*sector).toFixed(9)));
+   samples[0]=from;samples[samples.length-1]=landing;
+   add(landing,(samples.length-1)*response.stepMs,'detent','neighbor-hop',{samples,stepMs:response.stepMs});
+  }
+ };
  const landing=from+TAU*motion.coastTurns+normalize(target-normalize(from));
  if(dramatic){
   const teaseTarget=Number.isInteger(motion.teaseIndex)
@@ -83,15 +94,16 @@ export function createDrawPlan({id,winnerId,winnerIndex,count,startRotation=0,st
   const teaseLanding=from+TAU*motion.coastTurns+normalize(teaseTarget-normalize(from));
   add(teaseLanding,motion.slowMs,'coast');
   add(from,motion.pauseMs,'linear','pause');
-  const finalLanding=from+TAU*motion.extraTurns+normalize(target-normalize(from));
+  travelDirection=motion.reverseRestart===true?-1:1;
+  const finalLanding=from+travelDirection*(TAU*motion.extraTurns+normalize(travelDirection*(target-normalize(from))));
   if(motion.physicsVersion===1){
    // A theatrical restart remains optional, but starts from zero velocity.
    incomingSpeed=3.2;const launchMs=900;
-   add(from+incomingSpeed*launchMs/2000,launchMs,'accelerate');
+   add(from+travelDirection*incomingSpeed*launchMs/2000,launchMs,'accelerate');
   }
-  finishLanding(finalLanding,motion.extraMs,'finish');
+  completeLanding(finalLanding,motion.extraMs,'finish');
  }
- else finishLanding(landing,motion.slowMs,'coast');
+ else completeLanding(landing,motion.slowMs,'coast');
  const stoppedAt=startedAt+elapsed;
  return {id,winnerId,startedAt,stoppedAt,revealAt:stoppedAt+2700,endRotation:normalize(from),phases,completedAt:null};
 }
@@ -99,7 +111,7 @@ export function sampleDraw(plan,now){
  if(now<plan.startedAt)return {angle:plan.phases[0].from,phase:'waiting',pulse:0};
  const elapsed=now-plan.startedAt;
  for(const part of plan.phases){
-  if(elapsed<part.start+part.duration){
+  if(now<plan.stoppedAt&&elapsed<part.start+part.duration){
    const p=Math.max(0,Math.min(1,(elapsed-part.start)/part.duration));
    if(part.easing==='detent'){
     const at=p*(part.samples.length-1),index=Math.min(part.samples.length-2,Math.floor(at)),mix=at-index;
@@ -112,4 +124,5 @@ export function sampleDraw(plan,now){
  if(now<plan.revealAt&&!plan.completedAt){const p=(now-plan.stoppedAt)/(plan.revealAt-plan.stoppedAt);return {angle:plan.endRotation,phase:'highlight',pulse:.5-.5*Math.cos(p*TAU*3)}}
  return {angle:plan.endRotation,phase:plan.completedAt?'complete':'revealed',pulse:.6};
 }
+
 
