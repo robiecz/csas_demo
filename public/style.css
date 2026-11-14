@@ -184,7 +184,7 @@ html.draw-focus{overflow:hidden}
 
 /* One visitor emerges from the dark and stays for the entire draw. */
 #animal-stage:before{content:'';position:absolute;z-index:-1;left:8%;right:8%;bottom:1%;height:24%;border-radius:50%;background:radial-gradient(ellipse,#03050c 10%,#060910b3 45%,transparent 72%);box-shadow:0 -8px 22px -18px #a7b3da66;animation:animal-burrow-open 3.2s ease-out both;animation-delay:var(--emerge-delay,0s)}
-.animal-reveal{overflow:hidden;mask-image:linear-gradient(to bottom,transparent,#000 8%,#000 88%,transparent 100%)}
+.animal-reveal{overflow:visible;mask-image:none;-webkit-mask-image:none}
 .animal-emerge{transform-origin:50% 92%;animation:animal-emerge 3.2s cubic-bezier(.18,.75,.3,1) both;animation-delay:var(--emerge-delay,0s)}
 .little-animal{filter:brightness(1.12) drop-shadow(0 0 2px #d5daf02a)}
 .little-animal .animal-breathe{animation-duration:2s}
