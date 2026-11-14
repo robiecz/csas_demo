@@ -10,6 +10,7 @@ function colourText(hex){
 let unlockTimer,lastDrawId,highlightedId=null,highlightPulse=0;
 let clockOffset=0,bestClockRtt=Infinity,lastClockSync=0,sharedFrame=0,shownDrawId=null,phaseKey='',requestingSpin=false,refreshing=false;
 const serverNow=()=>Date.now()+clockOffset;
+const adminEmailRows=new Map();let adminEmailOrder=null;
 let state={people:[],winners:[],revision:0},rotation=0,busy=false,auth='',audio,on=true,lastTick=-1;
 let audioMaster,celebrationBuffer,celebrationLoading,celebrationSource;
 const canvas=$('wheel'),ctx=canvas.getContext('2d');
@@ -89,7 +90,43 @@ $('spin-label').style.setProperty('--set-label-size',Math.max(8,Math.min(18,70/M
 const spinHint=busy||locked?'Probíhá losování.':!state.people.length?'Přidej účastníky v administraci.':!available.length?'Všichni již byli vybráni. Vrať kolegy do hry v administraci.':'Roztočit kolo';
 $('spin').setAttribute('aria-label',spinHint);$('spin').title=spinHint;$('status').textContent=spinHint;
 
-const mail=state.emailStatus||{status:'none'};$('email-status').textContent=mail.status==='scheduled'?'✓ Zpráva výherci byla předána Resendu k odeslání po vyhlášení.':mail.status==='failed'?(mail.message||'Zprávu se nepodařilo odeslat.') :mail.status==='pending'?'Připravuji zprávu výherci…':'';$('email-retry').hidden=mail.status!=='failed';$('admin-list').replaceChildren();state.people.forEach((p,i)=>{const row=personRow(p,i,won.has(p.id)),button=document.createElement('button');button.textContent='×';button.setAttribute('aria-label','Odebrat '+p.name);button.disabled=busy;button.onclick=async()=>{try{applySnapshot(await api('remove',{id:p.id}))}catch(e){$('admin-error').textContent=e.message}};const email=document.createElement('input');email.type='email';email.value=p.email||'';email.placeholder='E-mail (nepovinný)';email.setAttribute('aria-label','E-mail: '+p.name);email.disabled=busy;const saveEmail=document.createElement('button');saveEmail.type='button';saveEmail.textContent='Uložit e-mail';saveEmail.disabled=busy;saveEmail.onclick=async()=>{if(!email.reportValidity())return;saveEmail.disabled=true;try{applySnapshot(await api('person-email',{id:p.id,email:email.value}));$('admin-error').textContent=''}catch(e){$('admin-error').textContent=e.message;saveEmail.disabled=false}};row.append(email,saveEmail,button);$('admin-list').append(row)});draw()}
+const mail=state.emailStatus||{status:'none'};$('email-status').textContent=mail.status==='scheduled'?'✓ Zpráva výherci byla předána Resendu k odeslání po vyhlášení.':mail.status==='failed'?(mail.message||'Zprávu se nepodařilo odeslat.') :mail.status==='pending'?'Připravuji zprávu výherci…':'';$('email-retry').hidden=mail.status!=='failed';renderAdminEmails(won,busy||locked);draw()}
+function renderAdminEmails(won,locked){
+ const order=state.people.map(p=>p.id),ids=new Set(order);
+ for(const id of adminEmailRows.keys())if(!ids.has(id))adminEmailRows.delete(id);
+ const rows=state.people.map((person,i)=>{
+  let entry=adminEmailRows.get(person.id);
+  if(!entry){
+   const row=personRow(person,i,won.has(person.id)),email=document.createElement('input'),saveButton=document.createElement('button'),removeButton=document.createElement('button');
+   email.type='email';email.placeholder='E-mail (nepovinný)';email.setAttribute('aria-label','E-mail: '+person.name);
+   saveButton.type='button';saveButton.textContent='Uložit e-mail';removeButton.type='button';removeButton.textContent='×';removeButton.setAttribute('aria-label','Odebrat '+person.name);
+   entry={row,email,saveButton,removeButton,dirty:false,saving:false};
+   email.oninput=()=>{entry.dirty=true};
+   saveButton.onclick=async()=>{
+    if(entry.saving||!email.reportValidity())return;
+    const submitted=email.value;entry.saving=true;saveButton.disabled=true;
+    try{
+     const next=await api('person-email',{id:person.id,email:submitted});
+     if(email.value===submitted)entry.dirty=false;
+     applySnapshot(next);$('admin-error').textContent='';
+    }catch(e){$('admin-error').textContent=e.message}
+    finally{entry.saving=false;saveButton.disabled=busy||serverNow()<(state.lockedUntil||0)}
+   };
+   removeButton.onclick=async()=>{try{applySnapshot(await api('remove',{id:person.id}))}catch(e){$('admin-error').textContent=e.message}};
+   row.append(email,saveButton,removeButton);adminEmailRows.set(person.id,entry);
+  }
+  // Polling updates saved values, but never discards a draft or replaces its input.
+  if(!entry.dirty&&document.activeElement!==entry.email)entry.email.value=person.email||'';
+  entry.row.classList.toggle('won',won.has(person.id));entry.email.disabled=locked;entry.saveButton.disabled=locked||entry.saving;entry.removeButton.disabled=locked;
+  return entry.row;
+ });
+ const key=order.join(',');
+ if(key!==adminEmailOrder){
+  const active=document.activeElement;
+  $('admin-list').replaceChildren(...rows);adminEmailOrder=key;
+  if([...adminEmailRows.values()].some(entry=>entry.email===active))active.focus();
+ }
+}
 function pointerDeflection(angle,speed,count){
  if(!count||Math.abs(speed)<.002)return 0;
  const sector=TAU/count,distance=Math.atan2(Math.sin(angle*count),Math.cos(angle*count))/count;
