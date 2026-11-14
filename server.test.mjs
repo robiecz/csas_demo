@@ -46,6 +46,17 @@ test('autorizace, validace, losování, souběh, reset a persistence',async()=>{
  s=(await request('/api/spin',{revision:s.revision})).data.state;
  {const disk=JSON.parse(readFileSync(join(dir,'state.json')));disk.lockedUntil=0;writeFileSync(join(dir,'state.json'),JSON.stringify(disk));}
  s=(await request('/api/reset',{revision:s.revision})).data;assert.deepEqual(s.usedAnimalKinds,[]);assert.equal(s.lastAnimalKind,null);
+ assert.equal((await request('/api/settings',{revision:s.revision,onlyLizard:'yes'})).status,400);
+ assert.equal((await request('/api/settings',{revision:s.revision,onlyLizard:true},false)).status,401);
+ s=(await request('/api/settings',{revision:s.revision,animalsEnabled:false})).data;
+ s=(await request('/api/settings',{revision:s.revision,onlyLizard:true})).data;assert.equal(s.onlyLizard,true);assert.equal(s.animalsEnabled,true);
+ for(let i=0;i<3;i++){
+  s=(await request('/api/spin',{revision:s.revision},false)).data.state;assert.equal(s.currentDraw.animalKind,'lizard');
+  assert.equal((await request('/api/state',null,false)).data.onlyLizard,true);
+  const disk=JSON.parse(readFileSync(join(dir,'state.json')));disk.lockedUntil=0;writeFileSync(join(dir,'state.json'),JSON.stringify(disk));
+  s=(await request('/api/reset',{revision:s.revision})).data;assert.equal(s.onlyLizard,true,'reset zachová volbu režimu');
+ }
+ s=(await request('/api/settings',{revision:s.revision,onlyLizard:false})).data;assert.equal(s.onlyLizard,false);
  s=(await request('/api/remove',{revision:s.revision,id:s.people[0].id})).data;assert.equal(s.people.length,71);
  }finally{rmSync(dir,{recursive:true,force:true})}
 });
