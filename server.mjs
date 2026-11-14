@@ -1,3 +1,5 @@
+import {parseParticipants,emailAddress} from './participants.mjs';
+import {prepareWinnerEmail,sendWinnerEmail,winnerEmailStatus,winnerImage} from './winner-email.mjs';
 import {companionKinds,animalKindForDraw} from './public/companions.js';
 import http from 'node:http';
 import {readFileSync} from 'node:fs';
@@ -25,12 +27,13 @@ function rememberAdmin(req,res){
  res.setHeader('Set-Cookie',ADMIN_COOKIE+'='+expires+'.'+signSession(expires)+'; Max-Age='+ADMIN_AGE+'; Path=/; HttpOnly; SameSite=Strict'+(secure?'; Secure':''));
 }
 
-const assets={'/companions.js':['companions.js','text/javascript; charset=utf-8'],'/animals.js':['animals.js','text/javascript; charset=utf-8'],'/celebration-audio.js':['celebration-audio.js','text/javascript; charset=utf-8'],'/sets-ui.js':['sets-ui.js','text/javascript; charset=utf-8'],'/timeline.js':['timeline.js','text/javascript; charset=utf-8'],'/favicon.svg':['favicon.svg','image/svg+xml'],'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
+const assets={'/wheel-renderer.js':['wheel-renderer.js','text/javascript; charset=utf-8'],'/companions.js':['companions.js','text/javascript; charset=utf-8'],'/animals.js':['animals.js','text/javascript; charset=utf-8'],'/celebration-audio.js':['celebration-audio.js','text/javascript; charset=utf-8'],'/sets-ui.js':['sets-ui.js','text/javascript; charset=utf-8'],'/timeline.js':['timeline.js','text/javascript; charset=utf-8'],'/favicon.svg':['favicon.svg','image/svg+xml'],'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
 export async function handler(req,res){
  let selectedSet;
- const reply=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify({...data,...(data.people?{set:selectedSet}:{}),serverNow:Date.now()}))};
+ const reply=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify({...data,...(data.people?{set:selectedSet}:{}),serverNow:Date.now()},(key,value)=>!authorized(req)&&['email','emailStatus'].includes(key)?undefined:value))};
  try{
  const url=new URL(req.url,'http://localhost'),path=url.pathname;
+ if(req.method==='GET'&&path==='/api/winner-image'){const image=await winnerImage(url.searchParams.get('draw'),url.searchParams.get('token'));res.writeHead(image?200:404,{'Content-Type':image?'image/png':'text/plain','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});return res.end(image||'Nenalezeno.')}
  if(path.startsWith('/api/')){
  if(!password)return reply(503,{error:'Administrace zatím nemá nastavené heslo.'});
  if(path==='/api/sets'||path.startsWith('/api/sets/')){
@@ -46,17 +49,21 @@ export async function handler(req,res){
  const scope=selectedSet.id==='default'?undefined:selectedSet.id;
  const saveSet=(next,revision)=>save(next,revision,scope);
  let state=await load(scope);let lockedUntil=state.lockedUntil||0;
- if(req.method==='GET'&&path==='/api/state')return reply(200,{...state,lockedUntil});
+ if(req.method==='GET'&&path==='/api/state')return reply(200,{...state,lockedUntil,...(authorized(req)?{emailStatus:await winnerEmailStatus(state.currentDraw?.id)}:{})});
  if(!(req.method==='POST'&&['/api/spin','/api/complete'].includes(path))&&!authorized(req))return reply(401,{error:'Nesprávné heslo administrátora.'});
  if(req.method==='GET'&&path==='/api/auth'){rememberAdmin(req,res);return reply(200,{ok:true})}
  if(req.method!=='POST')return reply(405,{error:'Nepodporovaná metoda.'});
  if(req.headers.origin&&req.headers.origin!==`http://${req.headers.host}`&&req.headers.origin!==`https://${req.headers.host}`)return reply(403,{error:'Neplatný původ požadavku.'});
  let body='';for await(const chunk of req){body+=chunk;if(body.length>100000)return reply(413,{error:'Příliš mnoho dat.'})}const data=req.body&&typeof req.body==='object'?req.body:JSON.parse(typeof req.body==='string'?req.body:(body||'{}'));
  if(path==='/api/complete'&&state.currentDraw?.completedAt&&state.currentDraw.winnerId===data.winnerId)return reply(200,{...state,lockedUntil});
- if(path!=='/api/complete'&&Date.now()<lockedUntil)return reply(409,{error:'Probíhá losování. Vyčkej na vyhlášení.'});
+ if(!['/api/complete','/api/email-retry'].includes(path)&&Date.now()<lockedUntil)return reply(409,{error:'Probíhá losování. Vyčkej na vyhlášení.'});
  if(data.revision!==state.revision)return reply(409,{error:'Seznam se změnil. Obnov stránku a zkus to znovu.'});
  let next=structuredClone(state);
  if(path==='/api/logout'){res.setHeader('Set-Cookie',ADMIN_COOKIE+'=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict'+(process.env.VERCEL?'; Secure':''));return reply(200,{ok:true})}
+ if(path==='/api/email-retry'){
+ if(data.drawId!==state.currentDraw?.id)return reply(409,{error:'Losování se změnilo.'});
+ return reply(200,{emailStatus:await sendWinnerEmail(data.drawId)});
+ }
  if(path==='/api/complete'){
  if(!data.winnerId||next.winners.at(-1)?.id!==data.winnerId)return reply(409,{error:'Mezitím proběhlo jiné losování. Obnov stránku.'});
  if(next.currentDraw&&Date.now()<next.currentDraw.revealAt)return reply(409,{error:'Ještě probíhá vyhlášení. Za okamžik můžeš pokračovat.'});
@@ -67,10 +74,10 @@ export async function handler(req,res){
  if(data.onlyLizard!==undefined){next.onlyLizard=data.onlyLizard;if(data.onlyLizard)next.animalsEnabled=true}
  await saveSet(next,state.revision);state=next;
  }else if(path==='/api/add'){
- const names=String(data.names||'').split(/\n/).map(n=>n.trim().replace(/\s+/g,' ')).filter(Boolean);
- if(!names.length||names.some(n=>n.length>80||!/^\p{L}[\p{L}\p{M}\p{N} '’.-]*$/u.test(n)))return reply(400,{error:'Zadej jméno nebo název na samostatný řádek (max. 80 znaků), použij písmena, čísla, mezery, tečky, pomlčky nebo apostrofy.'});
- for(const name of names)if(!next.people.some(p=>p.name.toLocaleLowerCase('cs')===name.toLocaleLowerCase('cs')))next.people.push({id:randomUUID(),name});
+ const people=parseParticipants(data.names);if(!people.length)return reply(400,{error:'Zadej alespoň jedno jméno.'});
+ for(const person of people){const found=next.people.find(p=>p.name.toLocaleLowerCase('cs')===person.name.toLocaleLowerCase('cs'));if(found){if(person.email!==undefined)found.email=person.email}else next.people.push({id:randomUUID(),...person})}
  if(next.people.length>300)return reply(400,{error:'Maximum je 300 účastníků.'});await saveSet(next,state.revision);state=next;
+ }else if(path==='/api/person-email'){const person=next.people.find(p=>p.id===data.id);if(!person)return reply(404,{error:'Účastník neexistuje.'});person.email=emailAddress(data.email);await saveSet(next,state.revision);state=next;
  }else if(path==='/api/remove'){next.people=next.people.filter(p=>p.id!==data.id);await saveSet(next,state.revision);state=next}
  else if(path==='/api/reset'){
  next.winners=[];next.currentDraw=null;next.rotation=0;next.usedAnimalKinds=[];next.lastAnimalKind=null;
@@ -118,7 +125,9 @@ export async function handler(req,res){
  }
  next.currentDraw=plan;next.rotation=plan.endRotation;
  next.winners.push({...winner,at:new Date().toISOString()});next.lockedUntil=plan.revealAt+10000;lockedUntil=next.lockedUntil;await saveSet(next,state.revision);state=next;
- return reply(200,{state:{...state,lockedUntil,set:selectedSet},winner,dramatic,motion});
+ let emailStatus={status:'none'};
+ if(winner.email){try{await prepareWinnerEmail(state,selectedSet);emailStatus=await sendWinnerEmail(plan.id)}catch{emailStatus={status:'failed',message:'Zprávu se nepodařilo připravit.'}}}
+ return reply(200,{state:{...state,lockedUntil,set:selectedSet,emailStatus},winner,dramatic,motion});
  }else return reply(404,{error:'Nenalezeno.'});
  return reply(200,{...state,lockedUntil});
  }

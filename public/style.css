@@ -342,3 +342,5 @@ html.draw-focus{overflow:hidden}
 
 /* Pulse the current set name, wrapping longer names inside the hub. */
 #spin.hub.is-spinning small{font-size:var(--set-label-size,14px);max-width:calc(100% - 12px);white-space:normal;overflow-wrap:anywhere;text-align:center;line-height:1.15;letter-spacing:0}
+
+#admin-list .person{flex-wrap:wrap}#admin-list input[type=email]{min-width:160px;flex:1}#admin-list button{font-size:12px}#email-status{font-size:13px;color:#ffd69f}
