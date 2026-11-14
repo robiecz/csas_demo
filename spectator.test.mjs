@@ -1,3 +1,4 @@
+import {renderWheel,personColour,palette} from './public/wheel-renderer.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -10,7 +11,7 @@ function element(){return {style:{setProperty(){}},classList:{values:new Set(),t
 async function client(now){
  const elements=new Map(),clock={now};let counter=0;const frames=new Map();
  const sandbox={location:{pathname:"/"},sampleDraw,Date:class extends Date{static now(){return clock.now}},document:{getElementById:id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id)},createElement:element,querySelectorAll:()=>[],addEventListener(){},fullscreenEnabled:false,documentElement:element()},window:{},matchMedia:()=>({matches:false}),performance:{now:()=>clock.now},AbortSignal,requestAnimationFrame:fn=>{frames.set(++counter,fn);return counter},cancelAnimationFrame:id=>frames.delete(id),setTimeout:()=>++counter,clearTimeout(){},setInterval(){},innerWidth:1000,innerHeight:800,devicePixelRatio:1,fetch:async url=>({ok:url!=='/api/auth',json:async()=>url==='/api/auth'?{error:'Sign in required'}:{...structuredClone(snapshot),serverNow:clock.now}})};
- vm.createContext(sandbox);vm.runInContext(readFileSync('public/app.js','utf8').replace(/^import[^\n]+\n/,''),sandbox);await new Promise(resolve=>setImmediate(resolve));
+ sandbox.renderWheel=renderWheel;sandbox.personColour=personColour;sandbox.palette=palette;vm.createContext(sandbox);vm.runInContext(readFileSync('public/app.js','utf8').replace(/^import[^\n]+\n/gm,''),sandbox);await new Promise(resolve=>setImmediate(resolve));
  return {clock,receive(next){sandbox.next=next;vm.runInContext('applySnapshot(next)',sandbox)},view(){return JSON.parse(vm.runInContext("JSON.stringify({focus:document.documentElement.classList.contains('draw-focus'),rotation,busy,highlightedId,highlightPulse,presenter:$('current-presenter').textContent,modal:$('winner-dialog').open})",sandbox))}};
 }
 test('dva klienti: připojení uprostřed, společné vyhlášení a společné pokračování',async()=>{

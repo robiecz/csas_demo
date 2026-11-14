@@ -1,3 +1,4 @@
+import {parseParticipants} from './participants.mjs';
 import {load,save,emptyState,saveSetAndRegistry} from './store.mjs';
 import {randomUUID} from 'node:crypto';
 const fail=(status,message)=>{const e=Error(message);e.status=status;throw e};
@@ -6,7 +7,6 @@ export async function resolveSet(slug){
  if(!slug){const r=await registry();return {id:'default',name:r.defaultName,slug:''}}
  const r=await registry(),set=r.sets.find(s=>!s.deletedAt&&s.slug===slug);if(!set)fail(404,'Tato sada neexistuje nebo byla odstraněna.');return set;
 }
-function namesList(input){const names=String(input||'').split(/\n/).map(n=>n.trim().replace(/\s+/g,' ')).filter(Boolean);if(names.length>300||names.some(n=>n.length>80||!/^\p{L}[\p{L}\p{M}\p{N} '’.-]*$/u.test(n)))fail(400,'Každé jméno nebo název zadej na nový řádek (max. 300 položek a 80 znaků). Použij písmena, čísla, mezery, tečky, pomlčky nebo apostrofy.');return [...new Map(names.map(n=>[n.toLocaleLowerCase('cs'),n])).values()]}
 export function slugify(value){return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,70)}
 export async function manageSets(path,data={}){
  const r=await registry(),active=r.sets.filter(s=>!s.deletedAt);
@@ -25,12 +25,12 @@ export async function manageSets(path,data={}){
  if((!slug&&existing?.id!=='default')||(slug&&!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))||slug.length>70||['api','public','admin'].includes(slug))fail(400,'Adresa smí obsahovat malá písmena bez diakritiky, čísla a pomlčky.');
  if(active.some(s=>s.slug===slug&&s.id!==existing?.id))fail(409,'Tuto adresu už používá jiná sada.');
  if(!existing&&active.length>=100)fail(400,'Maximum je 100 sad.');
- const names=namesList(data.names),id=existing?.id||randomUUID(),scope=id==='default'?undefined:id;
+ const names=parseParticipants(data.names),id=existing?.id||randomUUID(),scope=id==='default'?undefined:id;
  const state=existing?await load(scope):emptyState();
  if(Date.now()<(state.lockedUntil||0))fail(409,'V této sadě právě probíhá losování. Počkej na dokončení.');
  if(existing&&data.setRevision!==state.revision)fail(409,'Jména nebo výsledky se změnily. Otevři úpravu znovu.');
  const byName=new Map(state.people.map(p=>[p.name.toLocaleLowerCase('cs'),p]));
- const people=names.map(name=>({...byName.get(name.toLocaleLowerCase('cs')),id:byName.get(name.toLocaleLowerCase('cs'))?.id||randomUUID(),name}));
+ const people=names.map(person=>({...byName.get(person.name.toLocaleLowerCase('cs')),id:byName.get(person.name.toLocaleLowerCase('cs'))?.id||randomUUID(),...person}));
  const changed=JSON.stringify(people)!==JSON.stringify(state.people);
  const next={...state,people};if(changed){next.currentDraw=null;next.rotation=0;next.lockedUntil=0}
  const set={id,slug,name,createdAt:existing?.createdAt||Date.now()};

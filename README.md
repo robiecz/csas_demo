@@ -56,3 +56,11 @@ Zvuk na cizím zařízení může prohlížeč povolit až po interakci. Omezen�
 Administrace obsahuje správu sad s názvem, vlastní adresou a hromadnou úpravou jmen. Výchozí sada na `/` zachovává původní Redis klíč, data ani výsledky se nemigrují ani nemažou. Nové sady mají samostatné záznamy podle UUID; změna názvu či adresy nemění jejich identitu. Úpravy jmen a seznamu sad se v Redis zapisují atomicky s kontrolou obou revizí. Sadu při probíhajícím losování nelze upravovat ani odstranit. Odstranění skryje její adresu a seznam, interní data se ponechají pro případnou obnovu.
 
 Přejmenování sady zachovává její adresu, pokud ji správce výslovně neupraví. Každá sada má vlastní synchronizované losování a reset. Administrátorské přihlášení platí pro všechny sady.
+
+## E-maily výhercům
+
+Resend Free je propojený s projektem. Server používá `RESEND_API_KEY` a `RESEND_EMAIL_DOMAIN`, nikdy je neposílá klientovi. Odesílatel je `Level Up demo <demo@DOMÉNA>`. V administraci lze upravit e-mail u účastníka nebo použít řádky `Jméno Příjmení; email@example.cz` v aktuální sadě i editoru sad. E-mail je nepovinný; bez něj se neposílá.
+
+Po losování se v samostatném záznamu uchová původní příjemce a neměnný stav kola. Resend naplánuje HTML zprávu na vyhlášení (+2 sekundy). HTML obsahuje pouze obrázek PNG ze sdíleného rendereru kola; odkaz má náhodný přístupový token a nefunguje před vyhlášením. Starší obrázky neovlivní reset ani další losování. Některé poštovní aplikace vyžadují povolení načtení vzdálených obrázků.
+
+Odeslání má trvalý záznam, krátký zámek a idempotency key podle UUID losování. Při chybě lze odeslání zopakovat v administraci; automatické opakování je omezeno na 23 hodin (Resend drží idempotency keys 24 hodin). Stav „předáno Resendu“ neznamená potvrzené doručení do schránky. E-mailové adresy jsou odstraněné ze všech veřejných odpovědí API.
