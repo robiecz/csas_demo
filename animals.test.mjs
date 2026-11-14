@@ -29,7 +29,7 @@ test('zvířátka: jedna postavička, různé strany a činnosti, vypnutí a mob
   listener({detail:{...detail,plan:{...detail.plan,id:'server-'+kind,animalKind:kind}}});
   assert.ok(stage.innerHTML.includes('little-animal '+kind+' '),'server určuje stejnou postavičku pro všechny diváky');
  }
- assert.equal(kinds.size,7);assert.equal(actions.size,26);assert.equal(sides.size,2);
+ assert.equal(kinds.size,7);assert.equal(actions.size,31);assert.equal(sides.size,2);
  listener({detail:{...detail,enabled:false}});assert.equal(stage.hidden,true);
  listener({detail:{...detail,busy:false}});assert.equal(stage.hidden,true);
  context.innerWidth=800;listener({detail});assert.equal(stage.hidden,true);

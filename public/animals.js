@@ -44,11 +44,11 @@ function animalSvg(kind,action){
 }
 
 // Each visitor has its own silhouette and movements, all on the shared draw clock.
-const companionActions={dog:['sniff','paw','groom','scratch','yawn','wag'],cat:['sniff','paw','groom','scratch','yawn','wag'],toddler:['clap','wave','bounce','peek'],llama:['chew','ears','look','prance'],snake:['slither','tongue','sway','coil'],parrot:['flap','preen','bob','dance'],lizard:['neck-bounce','neck-metal','neck-jelly','neck-wind']};
+const companionActions={dog:['sniff','paw','groom','scratch','yawn','wag'],cat:['sniff','paw','groom','scratch','yawn','wag'],toddler:['clap','wave','bounce','peek'],llama:['chew','ears','look','prance'],snake:['slither','tongue','sway','coil'],parrot:['flap','preen','bob','dance'],lizard:['neck-bounce','neck-metal','neck-jelly','neck-wind','neck-sneeze','neck-hiccup','neck-disco','neck-periscope','neck-giggle']};
 function lizardSvg(action){
  return `<svg viewBox="0 0 240 220" xmlns="http://www.w3.org/2000/svg" class="little-animal lizard action-${action}"><defs><linearGradient id="lizard-rubber" x2="1" y2=".6"><stop stop-color="#63e488"/><stop offset=".4" stop-color="#24ba73"/><stop offset="1" stop-color="#087654"/></linearGradient><linearGradient id="lizard-mouth" x2=".4" y2="1"><stop stop-color="#d22c42"/><stop offset="1" stop-color="#821d31"/></linearGradient><linearGradient id="lizard-tongue" x2=".3" y2="1"><stop stop-color="#ff7684"/><stop offset="1" stop-color="#df324f"/></linearGradient></defs>
  <ellipse cx="119" cy="200" rx="93" ry="9" fill="#0005"/>
- <g class="lizard-body"><path d="M123 164Q150 194 185 158Q212 131 235 158Q210 149 199 172Q166 216 120 188" fill="url(#lizard-rubber)" stroke="#68d996" stroke-width="1.5"/>
+ <g class="lizard-body"><path class="lizard-tail" d="M123 164Q150 194 185 158Q212 131 235 158Q210 149 199 172Q166 216 120 188" fill="url(#lizard-rubber)" stroke="#68d996" stroke-width="1.5"/>
  <path d="M67 137Q104 122 127 150L136 178Q125 200 95 196L58 185Q48 164 67 137" fill="url(#lizard-rubber)"/>
  <path d="M65 174L39 193L26 190M112 179L132 203L147 201" fill="none" stroke="url(#lizard-rubber)" stroke-width="15" stroke-linecap="round"/>
  <path d="M29 188l-6 7m8-4-1 9m112 0 6 6m-1-8 8 2" stroke="#41cf82" stroke-width="5" stroke-linecap="round"/>
