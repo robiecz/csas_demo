@@ -62,8 +62,10 @@ export async function handler(req,res){
  if(next.currentDraw&&Date.now()<next.currentDraw.revealAt)return reply(409,{error:'Ještě probíhá vyhlášení. Za okamžik můžeš pokračovat.'});
  next.lockedUntil=0;if(next.currentDraw)next.currentDraw.completedAt=Date.now();lockedUntil=0;await saveSet(next,state.revision);state=next;
  }else if(path==='/api/settings'){
- if(typeof data.animalsEnabled!=='boolean')return reply(400,{error:'Neplatné nastavení zvířátek.'});
- next.animalsEnabled=data.animalsEnabled;await saveSet(next,state.revision);state=next;
+ if((data.animalsEnabled===undefined&&data.onlyLizard===undefined)||(data.animalsEnabled!==undefined&&typeof data.animalsEnabled!=='boolean')||(data.onlyLizard!==undefined&&typeof data.onlyLizard!=='boolean'))return reply(400,{error:'Neplatné nastavení zvířátek.'});
+ if(data.animalsEnabled!==undefined)next.animalsEnabled=data.animalsEnabled;
+ if(data.onlyLizard!==undefined){next.onlyLizard=data.onlyLizard;if(data.onlyLizard)next.animalsEnabled=true}
+ await saveSet(next,state.revision);state=next;
  }else if(path==='/api/add'){
  const names=String(data.names||'').split(/\n/).map(n=>n.trim().replace(/\s+/g,' ')).filter(Boolean);
  if(!names.length||names.some(n=>n.length>80||!/^\p{L}[\p{L}\p{M}\p{N} '’.-]*$/u.test(n)))return reply(400,{error:'Zadej jméno nebo název na samostatný řádek (max. 80 znaků), použij písmena, čísla, mezery, tečky, pomlčky nebo apostrofy.'});
@@ -101,6 +103,7 @@ export async function handler(req,res){
  if(motion.teaseIndex>=winnerIndex&&next.people.length>1)motion.teaseIndex++;
  const plan=createDrawPlan({id:randomUUID(),winnerId:winner.id,winnerIndex,count:next.people.length,startRotation:next.rotation||0,startedAt:Date.now()+700,dramatic,motion});
  if(next.animalsEnabled){
+  if(next.onlyLizard){plan.animalKind='lizard'}else{
   const previous=next.lastAnimalKind||animalKindForDraw(next.currentDraw);
   // Upgrade old states by counting their most recent companion as already shown.
   let used=Array.isArray(next.usedAnimalKinds)?next.usedAnimalKinds.filter(kind=>companionKinds.includes(kind)):(previous?[previous]:[]);
@@ -108,6 +111,7 @@ export async function handler(req,res){
   if(!choices.length){used=[];choices=companionKinds.filter(kind=>kind!==previous)}
   plan.animalKind=choices[randomInt(choices.length)];
   next.usedAnimalKinds=[...new Set([...used,plan.animalKind])];next.lastAnimalKind=plan.animalKind;
+  }
  }
  next.currentDraw=plan;next.rotation=plan.endRotation;
  next.winners.push({...winner,at:new Date().toISOString()});next.lockedUntil=plan.revealAt+10000;lockedUntil=next.lockedUntil;await saveSet(next,state.revision);state=next;

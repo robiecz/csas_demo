@@ -264,3 +264,24 @@ html.draw-focus{overflow:hidden}
 .pointer svg{overflow:visible}
 
 .bulb-ring.celebrating .bulb{transition:opacity .18s ease,filter .18s ease}
+
+/* Rubber lizard: the accordion neck drives the joke, with a delayed tongue. */
+.lizard-neck{transform-origin:95px 145px;animation:lizard-neck-bounce 2.7s cubic-bezier(.3,.05,.25,1) infinite}
+.lizard-head{transform-origin:91px 91px;animation:lizard-head-lag 2.7s ease-in-out infinite}
+.lizard-tongue{transform-origin:87px 79px;animation:lizard-tongue-flop .68s ease-in-out infinite}
+.lizard-arm{transform-origin:95px 110px;animation:lizard-arm-flail .55s ease-in-out infinite alternate}
+.lizard-pupil{animation:lizard-googly 1.1s steps(2,end) infinite}
+.action-neck-metal .lizard-neck{animation:lizard-headbang .62s cubic-bezier(.45,0,.5,1) infinite}
+.action-neck-metal .lizard-head{animation:lizard-head-lag .62s ease-in-out infinite}
+.action-neck-jelly .lizard-neck{animation:lizard-jelly 3.8s ease-in-out infinite}
+.action-neck-wind .lizard-neck{animation:lizard-wind 2.1s ease-in-out infinite}
+.action-neck-wind .lizard-tongue{animation-duration:.22s}
+@keyframes lizard-neck-bounce{0%,100%{transform:scaleY(.83) rotate(-9deg)}24%{transform:scaleY(1.15) rotate(6deg)}37%{transform:scaleY(.74) rotate(-12deg)}52%{transform:scaleY(1.11) rotate(7deg)}65%{transform:scaleY(.91) rotate(-4deg)}78%{transform:scaleY(1.03) rotate(2deg)}}
+@keyframes lizard-headbang{0%,100%{transform:rotate(-19deg) scaleY(.9)}45%{transform:rotate(20deg) scaleY(1.07)}70%{transform:rotate(-9deg) scaleY(.82)}}
+@keyframes lizard-jelly{0%,20%,100%{transform:rotate(-4deg) scaleY(.9)}30%{transform:rotate(22deg) scaleY(1.1)}42%{transform:rotate(-18deg) scaleY(.8)}53%{transform:rotate(14deg) scaleY(1.08)}64%{transform:rotate(-10deg) scaleY(.91)}75%{transform:rotate(6deg)}86%{transform:rotate(-3deg)}}
+@keyframes lizard-wind{0%,100%{transform:rotate(13deg) skewX(5deg)}18%{transform:rotate(24deg) scaleY(.88)}32%{transform:rotate(9deg)}51%{transform:rotate(21deg) scaleY(1.05)}72%{transform:rotate(14deg)}}
+@keyframes lizard-head-lag{0%,100%{transform:rotate(8deg)}45%{transform:rotate(-14deg)}70%{transform:rotate(5deg)}}
+@keyframes lizard-tongue-flop{0%,100%{transform:rotate(-13deg) scaleX(.94)}50%{transform:rotate(19deg) scaleX(1.08)}}
+@keyframes lizard-arm-flail{from{transform:rotate(-9deg)}to{transform:rotate(12deg)}}
+@keyframes lizard-googly{0%,100%{transform:translate(0,0)}33%{transform:translate(2px,3px)}66%{transform:translate(-2px,1px)}}
+.lizard [class^="lizard-"]{animation-delay:var(--animal-delay,0s)}

@@ -96,6 +96,8 @@ $('spin').disabled=busy||!available.length||locked;
 $('spin').classList.toggle('is-spinning',busy);
 setDrawFocus(busy);
 $('animals-enabled').checked=!!state.animalsEnabled;
+$('only-lizard').checked=!!state.onlyLizard;
+$('only-lizard').disabled=busy||locked;
 $('animals-enabled').disabled=busy||locked;
 if(typeof CustomEvent==='function')document.dispatchEvent(new CustomEvent('wheel-state',{detail:{busy,enabled:!!state.animalsEnabled,plan:state.currentDraw,offset:clockOffset}}));
 $('spin-label').textContent=busy||locked?'Level Up':!available.length&&state.people.length?'HOTOVO':'ROZTOČIT';
@@ -267,6 +269,13 @@ $('reset').onclick=async()=>{
  }catch(e){
   message.textContent='';$('admin-error').textContent='Vrácení kolegů do hry se nepovedlo: '+e.message;
  }finally{button.disabled=false;button.textContent='↺ Vrátit všechny kolegy do hry'}
+};
+$('only-lizard').onchange=async()=>{
+ const toggle=$('only-lizard'),message=$('animals-status'),enabled=toggle.checked;
+ toggle.disabled=true;message.textContent='Ukládám…';
+ try{applySnapshot(await api('settings',{onlyLizard:enabled}));message.textContent=enabled?'Při každém točení se objeví ještěr.':'Zvířátka se opět náhodně střídají.'}
+ catch(error){toggle.checked=!!state.onlyLizard;message.textContent=error.message}
+ finally{toggle.disabled=busy||serverNow()<(state.lockedUntil||0)}
 };
 $('animals-enabled').onchange=async()=>{
  const toggle=$('animals-enabled'),message=$('animals-status'),enabled=toggle.checked;toggle.disabled=true;message.textContent='Ukládám…';
